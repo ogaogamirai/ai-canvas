@@ -1,0 +1,2087 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <title>AI-Canvas — Serverless Interactive Thinking Canvas</title>
+  <!-- KaTeX (ローカル最優先 + CDNフォールバック) -->
+  <link rel="stylesheet" href="./vendor/katex/katex.min.css" onerror="this.onerror=null;this.href='https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css';" />
+  <script src="./vendor/katex/katex.min.js" onerror="this.onerror=null;const s=document.createElement('script');s.src='https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js';document.head.appendChild(s);"></script>
+  <style>
+    :root {
+      /* 🌙 Cool Cyber (デフォルト) */
+      --bg-body: #0b0f19;
+      --grid-stroke: rgba(255, 255, 255, 0.04);
+      --header-bg: rgba(15, 23, 42, 0.88);
+      --header-border: #334155;
+      --brand-color: #38bdf8;
+      --badge-bg: rgba(56, 189, 248, 0.15);
+      --badge-border: rgba(56, 189, 248, 0.3);
+      --badge-color: #38bdf8;
+      --btn-bg: #1e293b;
+      --btn-color: #cbd5e1;
+      --btn-border: #475569;
+      --btn-hover-bg: #334155;
+      --btn-hover-color: #f8fafc;
+      --btn-hover-border: #38bdf8;
+      --log-color: #94a3b8;
+      --edge-stroke: #64748b;
+      --edge-label: #94a3b8;
+      --arrow-fill: #38bdf8;
+      --hit-box-fill: #0f172a;
+      
+      /* コンポーネント共通 */
+      --card-bg: #1e293b;
+      --card-border: #334155;
+      --card-text: #f8fafc;
+      --card-sub: #94a3b8;
+      --math-bg: #1e293b;
+      --math-border: #10b981;
+      --math-label: #10b981;
+      --math-text: #f8fafc;
+      --text-node-bg: rgba(30,41,59,0.85);
+      --text-node-border: #475569;
+      --text-node-title: #f8fafc;
+      --text-node-body: #cbd5e1;
+      --svg-node-bg: rgba(15,23,42,0.7);
+      --svg-node-border: #f59e0b;
+      --svg-node-title: #f59e0b;
+      --table-bg: rgba(15,23,42,0.92);
+      --table-th-bg: rgba(51,65,85,0.6);
+      --table-th-border: #475569;
+      --table-th-color: #f8fafc;
+      --table-td-border: rgba(255,255,255,0.07);
+      --table-td-color: #cbd5e1;
+      --table-td-first: #93c5fd;
+      --group-bg: rgba(15,23,42,0.45);
+      --group-border: #38bdf8;
+    }
+
+    body.theme-natural {
+      /* ☀️ Natural & White (手作り・生成りノート風) */
+      --bg-body: #fbfbfa;
+      --grid-stroke: rgba(60, 50, 40, 0.08);
+      --header-bg: rgba(255, 255, 255, 0.94);
+      --header-border: #e2e0d8;
+      --brand-color: #0f766e;
+      --badge-bg: rgba(15, 118, 110, 0.1);
+      --badge-border: rgba(15, 118, 110, 0.3);
+      --badge-color: #0f766e;
+      --btn-bg: #f5f4ef;
+      --btn-color: #44403c;
+      --btn-border: #d6d3c7;
+      --btn-hover-bg: #e7e5dc;
+      --btn-hover-color: #1c1917;
+      --btn-hover-border: #0f766e;
+      --log-color: #78716c;
+      --edge-stroke: #78716c;
+      --edge-label: #57534e;
+      --arrow-fill: #44403c;
+      --hit-box-fill: #ffffff;
+      
+      /* コンポーネント共通 (生成り・紙・万年筆風) */
+      --card-bg: #ffffff;
+      --card-border: #dcd9ce;
+      --card-text: #1c1917;
+      --card-sub: #78716c;
+      --math-bg: #f0fdf4;
+      --math-border: #059669;
+      --math-label: #047857;
+      --math-text: #064e3b;
+      --text-node-bg: #ffffff;
+      --text-node-border: #d6d3c7;
+      --text-node-title: #1c1917;
+      --text-node-body: #44403c;
+      --svg-node-bg: #fffbeb;
+      --svg-node-border: #d97706;
+      --svg-node-title: #b45309;
+      --table-bg: #ffffff;
+      --table-th-bg: #f5f4ef;
+      --table-th-border: #d6d3c7;
+      --table-th-color: #1c1917;
+      --table-td-border: rgba(0,0,0,0.06);
+      --table-td-color: #44403c;
+      --table-td-first: #0f766e;
+      --group-bg: rgba(245, 244, 239, 0.65);
+      --group-border: #78716c;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; }
+    body, html { width: 100%; height: 100%; overflow: hidden; font-family: system-ui, -apple-system, sans-serif; background: var(--bg-body); color: var(--card-text); transition: background 0.25s, color 0.25s; }
+
+    :root { --header-h: 56px; }
+
+    /* 上部ヘッダー（コンパクト・2段） */
+    #header {
+      position: absolute; top: 0; left: 0; right: 0; height: var(--header-h);
+      background: var(--header-bg); backdrop-filter: blur(10px);
+      border-bottom: 1px solid var(--header-border);
+      display: flex; flex-direction: column; justify-content: center;
+      padding: 4px 12px 2px; z-index: 1000; transition: all 0.25s; gap: 2px;
+    }
+    .header-row { display: flex; align-items: center; width: 100%; min-height: 0; }
+    .header-main { justify-content: space-between; gap: 8px; }
+    .header-log { height: 16px; }
+    .brand { font-size: 12px; font-weight: 700; color: var(--brand-color); display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
+    .badge { font-size: 9px; font-weight: 600; padding: 1px 6px; border-radius: 999px; letter-spacing: 0.04em; }
+    .badge-ipc { background: var(--badge-bg); color: var(--badge-color); border: 1px solid var(--badge-border); }
+    .toolbar-primary { display: flex; align-items: center; gap: 4px; flex-wrap: wrap; justify-content: flex-end; }
+    .btn-group { display: flex; gap: 4px; align-items: center; }
+    .btn { background: var(--btn-bg); color: var(--btn-color); border: 1px solid var(--btn-border); padding: 4px 10px; border-radius: 6px; font-size: 11px; font-weight: 600; cursor: pointer; transition: all 0.2s; }
+    .btn:hover { background: var(--btn-hover-bg); color: var(--btn-hover-color); border-color: var(--btn-hover-border); }
+    .btn-icon {
+      background: var(--btn-bg); color: var(--btn-color); border: 1px solid var(--btn-border);
+      width: 30px; height: 28px; padding: 0; border-radius: 6px; font-size: 14px; line-height: 1;
+      cursor: pointer; transition: all 0.2s; display: inline-flex; align-items: center; justify-content: center;
+    }
+    .btn-icon:hover { background: var(--btn-hover-bg); color: var(--btn-hover-color); border-color: var(--btn-hover-border); }
+    .menu-wrap { position: relative; }
+    .header-menu {
+      position: absolute; right: 0; top: calc(100% + 4px); min-width: 168px;
+      background: var(--header-bg); border: 1px solid var(--header-border); border-radius: 8px;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.35); padding: 4px; z-index: 1100;
+    }
+    .header-menu.hidden { display: none; }
+    .header-menu .menu-item {
+      display: block; width: 100%; text-align: left; background: none; border: none;
+      color: var(--btn-color); font-size: 11px; font-weight: 600; padding: 8px 10px; border-radius: 6px; cursor: pointer;
+    }
+    .header-menu .menu-item:hover { background: var(--btn-hover-bg); color: var(--btn-hover-color); }
+    #log-bar { font-size: 10px; color: var(--log-color); font-family: monospace; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; width: 100%; }
+
+    /* メインキャンバス */
+    #canvas { width: 100%; height: 100%; display: block; }
+    .grid-line { stroke: var(--grid-stroke); stroke-width: 1; }
+
+    /* 共通オブジェクトスタイル */
+    .canvas-obj { cursor: grab; touch-action: none; user-select: none; }
+    .canvas-obj:active { cursor: grabbing; }
+    .canvas-obj.dragging { filter: drop-shadow(0 14px 28px rgba(0,0,0,0.75)); }
+
+    /* エッジ */
+    .edge-path { fill: none; stroke-linecap: round; stroke-width: 2.2; }
+    .edge-path:not([stroke]) { stroke: var(--edge-stroke); }
+    .edge-label:not([fill]) { fill: var(--edge-label); }
+    .edge-label { font-size: 11px; font-weight: 600; text-anchor: middle; dominant-baseline: middle; }
+
+    /* HTML foreignObject スタイル (ドラッグが親要素に確実に届くよう設定) */
+    foreignObject { pointer-events: none; }
+    .html-container { width: 100%; height: 100%; overflow: hidden; }
+
+    /* 🌟 選択中ノードのフォーカスハイライト */
+    .canvas-obj.selected > rect:first-child {
+      filter: drop-shadow(0 0 12px rgba(56, 189, 248, 0.95)) !important;
+      stroke: var(--brand-color) !important;
+      stroke-width: 2.5px !important;
+    }
+
+    /* 📄 詳細パネル (Side Slide-in Drawer) */
+    #detail-panel {
+      position: absolute; top: var(--header-h); right: 0; bottom: 0; width: 380px; max-width: 90vw;
+      background: var(--header-bg); backdrop-filter: blur(16px);
+      border-left: 1px solid var(--header-border);
+      box-shadow: -8px 0 24px rgba(0,0,0,0.3);
+      transform: translateX(100%); transition: transform 0.28s cubic-bezier(0.16, 1, 0.3, 1);
+      display: flex; flex-direction: column; z-index: 1050;
+      color: var(--card-text); box-sizing: border-box;
+    }
+    #detail-panel.open {
+      transform: translateX(0);
+    }
+    .panel-header {
+      padding: 12px 16px; border-bottom: 1px solid var(--header-border);
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .panel-badge {
+      font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: 999px; text-transform: uppercase;
+      background: var(--badge-bg); color: var(--badge-color); border: 1px solid var(--badge-border);
+    }
+    .panel-close-btn {
+      background: none; border: none; color: var(--log-color); font-size: 15px; font-weight: 700;
+      cursor: pointer; padding: 3px 7px; border-radius: 4px; transition: all 0.2s;
+    }
+    .panel-close-btn:hover {
+      background: rgba(255,255,255,0.1); color: var(--card-text);
+    }
+    .panel-content {
+      flex: 1; overflow-y: auto; padding: 16px 20px; font-size: 13px; line-height: 1.65;
+    }
+    .panel-content h1 { font-size: 16px; font-weight: 800; margin: 8px 0 6px 0; color: var(--card-text); border-bottom: 1px solid var(--header-border); padding-bottom: 4px; }
+    .panel-content h2 { font-size: 14px; font-weight: 700; margin: 10px 0 4px 0; color: var(--card-text); }
+    .panel-content p { margin: 8px 0; color: var(--card-text); }
+    .panel-content ul { margin: 6px 0 10px 18px; padding: 0; color: var(--card-text); }
+    .panel-content li { margin-bottom: 4px; }
+    .panel-content strong { color: var(--brand-color); font-weight: 700; }
+    .panel-content .math-block { margin: 12px 0; padding: 10px 12px; background: var(--math-bg); border-radius: 8px; border: 1px solid var(--math-border); text-align: center; overflow-x: auto; max-width: 100%; }
+    table.canvas-data-table {
+      width: 100%; border-collapse: collapse; font-size: 11px; text-align: left;
+    }
+    .panel-content table.canvas-data-table { margin: 10px 0 14px; }
+    table.canvas-data-table th,
+    table.canvas-data-table td {
+      border: 1px solid var(--table-td-border); padding: 5px 8px; vertical-align: top;
+    }
+    table.canvas-data-table th {
+      background: var(--table-th-bg); color: var(--table-th-color); font-weight: 700;
+      border-color: var(--table-th-border);
+    }
+    table.canvas-data-table td { color: var(--table-td-color); }
+    table.canvas-data-table tr.canvas-table-stripe td {
+      background: rgba(255, 255, 255, 0.03);
+    }
+    body.theme-natural table.canvas-data-table tr.canvas-table-stripe td {
+      background: rgba(0, 0, 0, 0.02);
+    }
+    table.canvas-data-table td.canvas-table-lead {
+      color: var(--table-td-first); font-weight: 600;
+    }
+    .panel-conn-section { margin-top: 18px; padding-top: 12px; border-top: 1px solid var(--header-border); }
+    .panel-conn-section h2 { font-size: 12px; margin-bottom: 8px; }
+    .panel-conn-section ul { list-style: none; margin: 0; padding: 0; }
+    .panel-conn-section li { margin-bottom: 6px; }
+    .panel-conn-jump {
+      background: none; border: 1px solid var(--header-border); color: var(--brand-color);
+      font-size: 11px; padding: 4px 8px; border-radius: 6px; cursor: pointer; width: 100%; text-align: left;
+    }
+    .panel-conn-jump:hover { background: rgba(56, 189, 248, 0.08); border-color: var(--brand-color); }
+    #help-overlay {
+      position: fixed; inset: 0; background: rgba(0,0,0,0.55); z-index: 2000; display: none;
+      align-items: center; justify-content: center; padding: 24px;
+    }
+    #help-overlay.open { display: flex; }
+    #help-overlay .help-card {
+      max-width: 420px; background: var(--header-bg); border: 1px solid var(--header-border);
+      border-radius: 12px; padding: 20px 22px; font-size: 13px; line-height: 1.55; box-shadow: 0 16px 48px rgba(0,0,0,0.35);
+    }
+    #help-overlay h2 { font-size: 15px; margin-bottom: 10px; }
+    #help-overlay kbd { font-family: monospace; font-size: 11px; padding: 2px 5px; border-radius: 4px; background: var(--btn-bg); border: 1px solid var(--btn-border); }
+    .panel-footer {
+      padding: 10px 16px; border-top: 1px solid var(--header-border); font-size: 11px; color: var(--log-color);
+      background: rgba(0,0,0,0.04); display: flex; justify-content: space-between; align-items: center;
+    }
+  </style>
+</head>
+<body class="theme-cool">
+
+  <div id="header">
+    <div class="header-row header-main">
+      <div class="brand">
+        <span>🎨 AI-Canvas</span>
+        <span class="badge badge-ipc" title="WebView2 IPC・ポートゼロ">IPC</span>
+      </div>
+      <div class="toolbar-primary">
+        <button type="button" class="btn-icon" title="水平整列 (LR)" aria-label="水平整列" onclick="Canvas.autoLayout('LR')">↔</button>
+        <button type="button" class="btn-icon" title="垂直整列 (TB)" aria-label="垂直整列" onclick="Canvas.autoLayout('TB')">↕</button>
+        <button type="button" class="btn-icon" title="全体表示 (Fit)" aria-label="全体表示" onclick="Canvas.fitView()">⊡</button>
+        <button type="button" class="btn-icon" id="theme-btn" title="テーマ切替" aria-label="テーマ切替" onclick="Canvas.toggleTheme()">☀</button>
+        <div class="menu-wrap">
+          <button type="button" class="btn-icon" title="その他" aria-label="その他メニュー" onclick="Canvas.toggleHeaderMenu()">⋯</button>
+          <div id="header-menu" class="header-menu hidden">
+            <button type="button" class="menu-item" onclick="Canvas.clear(); Canvas.toggleHeaderMenu(true)">🧹 リセット</button>
+            <button type="button" class="menu-item" onclick="Canvas.exportHTML(); Canvas.toggleHeaderMenu(true)">💾 単体HTML保存</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="header-row header-log">
+      <div id="log-bar">キャンバス準備完了。AIの思考描画を待機中...</div>
+    </div>
+  </div>
+
+  <!-- 📄 詳細パネル (Side Slide-in Drawer) -->
+  <div id="detail-panel">
+    <div class="panel-header">
+      <div style="display:flex; align-items:center; gap:8px;">
+        <span id="panel-type-badge" class="panel-badge">CARD</span>
+        <span id="panel-node-id" style="font-size:12px; font-family:monospace; color:var(--log-color);">#id</span>
+      </div>
+      <button class="panel-close-btn" onclick="Canvas.closeDetailPanel()" title="閉じる (Esc)">✕</button>
+    </div>
+    <div id="panel-body" class="panel-content"></div>
+    <div class="panel-footer">
+      <span id="panel-connections">🔗 接続: なし</span>
+      <span style="font-size:10px; opacity:0.7;">キー: [↑↓←→] 移動 / [Esc] 閉じる</span>
+    </div>
+  </div>
+
+  <div id="help-overlay" role="dialog" aria-label="ショートカットヘルプ" onclick="if(event.target===this)Canvas.toggleHelp(false)">
+    <div class="help-card" onclick="event.stopPropagation()">
+      <h2>ショートカット</h2>
+      <p><kbd>↑↓←→</kbd> 近傍ノードへフォーカス（詳細パネルが開いているときだけ内容も更新）</p>
+      <p><kbd>Esc</kbd> 詳細パネルを閉じる（選択リングは維持）</p>
+      <p><kbd>?</kbd> このヘルプの表示 / 閉じる</p>
+      <p style="margin-top:12px;font-size:11px;color:var(--log-color);">ノードをクリックすると詳細パネルを開きます。</p>
+      <button type="button" class="btn-icon" style="margin-top:14px;width:100%;" onclick="Canvas.toggleHelp(false)">閉じる</button>
+    </div>
+  </div>
+
+  <svg id="canvas">
+    <defs>
+      <!-- グリッド -->
+      <pattern id="grid" width="32" height="32" patternUnits="userSpaceOnUse">
+        <path d="M 32 0 L 0 0 0 32" fill="none" class="grid-line" />
+      </pattern>
+      <!-- 矢印マーカー -->
+      <marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+        <path id="arrow-path" d="M 0 1.5 L 8 5 L 0 8.5 z" fill="var(--arrow-fill)" />
+      </marker>
+    </defs>
+
+    <rect width="100%" height="100%" fill="url(#grid)" />
+
+    <!-- レイヤー -->
+    <g id="edges-layer"></g>
+    <g id="objects-layer"></g>
+  </svg>
+
+  <script type="text/plain" id="canvas-initial-dsl" data-encoding="base64"></script>
+
+  <script>
+    // 汎用安全数値ヘルパー (グローバル)
+    function safeNum(val, fallback = 0) {
+      const n = Number(val);
+      return isFinite(n) ? n : fallback;
+    }
+
+    function safeFixed(val, digits = 1) {
+      const n = Number(val);
+      return isFinite(n) ? n.toFixed(digits) : "0.0";
+    }
+
+    function unescapeDetailMarkdown(raw) {
+      if (!raw) return '';
+      return String(raw).replace(/\\n(?![a-zA-Z])/g, '\n');
+    }
+
+    function normalizeLatexForKatex(expr) {
+      if (expr == null) return '';
+      let s = String(expr).replace(/\u00a5/g, '\\').replace(/¥/g, '\\').trim();
+      let prev;
+      do {
+        prev = s;
+        s = s.replace(/\\{2}(?=[a-zA-Z])/g, '\\');
+      } while (s !== prev);
+      return s;
+    }
+
+    const CANVAS_SCHEMA_VERSION = 1;
+
+    function renderKatexInto(container, expr, displayMode) {
+      const clean = normalizeLatexForKatex(expr);
+      if (!clean) return;
+      const run = () => {
+        if (!window.katex) return false;
+        try {
+          container.textContent = '';
+          katex.render(clean, container, { displayMode: !!displayMode, throwOnError: false });
+          return true;
+        } catch (e) {
+          container.textContent = clean;
+          return false;
+        }
+      };
+      if (!run()) {
+        let retries = 0;
+        const timer = setInterval(() => {
+          retries += 1;
+          if (run() || retries > 30) clearInterval(timer);
+        }, 100);
+      }
+    }
+
+    const INLINE_MD_TOKEN = /(\$\$[\s\S]+?\$\$|\$(?:\\.|[^\$\\])+\$|\*\*[^*]+\*\*|`[^`]+`)/g;
+
+    function renderInlineFormatting(text, container) {
+      if (!text) return;
+      const parts = String(text).split(INLINE_MD_TOKEN);
+      parts.forEach(part => {
+        if (!part) return;
+        if (part.startsWith('$$') && part.endsWith('$$')) {
+          const span = document.createElement('span');
+          span.className = 'math-block';
+          renderKatexInto(span, part.slice(2, -2), true);
+          container.appendChild(span);
+        } else if (part.startsWith('$') && part.endsWith('$')) {
+          const span = document.createElement('span');
+          renderKatexInto(span, part.slice(1, -1), false);
+          container.appendChild(span);
+        } else if (part.startsWith('**') && part.endsWith('**')) {
+          const strong = document.createElement('strong');
+          renderInlineFormatting(part.slice(2, -2), strong);
+          container.appendChild(strong);
+        } else if (part.startsWith('`') && part.endsWith('`')) {
+          const code = document.createElement('code');
+          code.style.cssText = 'background:rgba(255,255,255,0.08); padding:2px 5px; border-radius:4px; font-size:11px; font-family:monospace;';
+          code.textContent = part.slice(1, -1);
+          container.appendChild(code);
+        } else {
+          container.appendChild(document.createTextNode(part));
+        }
+      });
+    }
+
+    const CanvasTable = (function () {
+      function isMarkdownRow(line) {
+        const t = String(line).trim();
+        return t.length > 0 && t.startsWith('|') && t.endsWith('|');
+      }
+
+      function isMarkdownSeparator(line) {
+        const t = String(line).trim();
+        if (!isMarkdownRow(t)) return false;
+        return t.replace(/\|/g, '').replace(/[\s:\-]/g, '').length === 0;
+      }
+
+      function parseMarkdownCells(line) {
+        const t = String(line).trim();
+        return t.slice(1, -1).split('|').map((c) => c.trim());
+      }
+
+      function parseNodeFields(headersRaw, rowsRaw) {
+        const headers = String(headersRaw || '')
+          .split(',')
+          .map((s) => s.trim())
+          .filter(Boolean);
+        const rows = String(rowsRaw || '')
+          .split(';')
+          .map((r) => r.trim())
+          .filter(Boolean)
+          .map((r) => r.split('|').map((c) => c.trim()));
+        return { headers, rows };
+      }
+
+      function parseMarkdownBlock(block) {
+        const spec = { headers: [], rows: [] };
+        if (!block || !block.length) return spec;
+        let bodyStart = 0;
+        if (block.length > 1 && isMarkdownSeparator(block[1])) {
+          spec.headers = parseMarkdownCells(block[0]);
+          bodyStart = 2;
+        }
+        for (let i = bodyStart; i < block.length; i++) {
+          spec.rows.push(parseMarkdownCells(block[i]));
+        }
+        return spec;
+      }
+
+      function estimateSize(spec) {
+        const colCount = Math.max(
+          1,
+          spec.headers.length,
+          spec.rows[0] ? spec.rows[0].length : 0
+        );
+        const rowCount = Math.max(1, spec.rows.length);
+        const headerRows = spec.headers.length ? 1 : 0;
+        return {
+          w: Math.max(220, Math.min(560, colCount * 115 + 24)),
+          h: Math.max(90, 36 + (rowCount + headerRows) * 28 + 16)
+        };
+      }
+
+      function fillCell(el, text, richFn) {
+        if (richFn) richFn(String(text == null ? '' : text), el);
+        else el.textContent = text == null ? '' : String(text);
+      }
+
+      function appendTable(container, spec, opts) {
+        if (!container || !spec) return null;
+        opts = opts || {};
+        const tbl = document.createElement('table');
+        tbl.className = opts.tableClass || 'canvas-data-table';
+        const richFn = opts.richCells || null;
+        const stripe = opts.stripe !== false;
+        const leadCol = !!opts.firstColEmphasis;
+
+        if (spec.headers && spec.headers.length) {
+          const thead = document.createElement('thead');
+          const tr = document.createElement('tr');
+          spec.headers.forEach((h) => {
+            const th = document.createElement('th');
+            fillCell(th, h, richFn);
+            tr.appendChild(th);
+          });
+          thead.appendChild(tr);
+          tbl.appendChild(thead);
+        }
+
+        if (spec.rows && spec.rows.length) {
+          const tbody = document.createElement('tbody');
+          spec.rows.forEach((cells, idx) => {
+            const tr = document.createElement('tr');
+            if (stripe && idx % 2 === 1) tr.classList.add('canvas-table-stripe');
+            cells.forEach((c, cIdx) => {
+              const td = document.createElement('td');
+              if (leadCol && cIdx === 0) td.classList.add('canvas-table-lead');
+              fillCell(td, c, richFn);
+              tr.appendChild(td);
+            });
+            tbody.appendChild(tr);
+          });
+          tbl.appendChild(tbody);
+        }
+
+        container.appendChild(tbl);
+        return tbl;
+      }
+
+      return {
+        isMarkdownRow,
+        isMarkdownSeparator,
+        parseNodeFields,
+        parseMarkdownBlock,
+        estimateSize,
+        appendTable
+      };
+    })();
+
+    function utf8FromBase64(b64) {
+      const bin = atob(b64);
+      const bytes = new Uint8Array(bin.length);
+      for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+      return new TextDecoder('utf-8').decode(bytes);
+    }
+
+    function utf8ToBase64(text) {
+      const bytes = new TextEncoder().encode(String(text));
+      let bin = '';
+      bytes.forEach((b) => { bin += String.fromCharCode(b); });
+      return btoa(bin);
+    }
+
+    function readEmbeddedDsl() {
+      const el = document.getElementById('canvas-initial-dsl');
+      if (!el) return '';
+      const raw = (el.textContent || '').trim();
+      if (!raw) return '';
+      try {
+        if (el.getAttribute('data-encoding') === 'base64') {
+          return utf8FromBase64(raw);
+        }
+        return raw;
+      } catch (err) {
+        console.error('[readEmbeddedDsl]', err);
+        return '';
+      }
+    }
+
+    // =========================================================================
+    // 🏛️ 1. Canvas Core (最小不変エンジン)
+    // =========================================================================
+    const Canvas = window.Canvas = (function() {
+      const svg = document.getElementById('canvas');
+      const objectsLayer = document.getElementById('objects-layer');
+      const edgesLayer = document.getElementById('edges-layer');
+      const logBar = document.getElementById('log-bar');
+
+      const objects = new Map(); // id -> { id, type, x, y, w, h, data, el }
+      const edges = [];          // [{ u, v, label, style? }]
+      const registry = new Map(); // type -> { render: fn, getDimensions: fn }
+
+      function normalizeEdgeStyle(style) {
+        if (!style || typeof style !== 'object') return null;
+        const out = {};
+        const stroke = style.stroke || style.color;
+        if (stroke && /^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/.test(String(stroke).trim())) {
+          out.stroke = String(stroke).trim();
+        }
+        if (style.width != null && style.width !== '') {
+          const w = Number(style.width);
+          if (isFinite(w) && w > 0 && w <= 12) out.width = w;
+        }
+        if (style.dash != null && String(style.dash).trim()) {
+          out.dash = String(style.dash).trim();
+        }
+        if (style.arrow === false || style.arrow === 'false' || style.arrow === '0') {
+          out.arrow = false;
+        }
+        return Object.keys(out).length ? out : null;
+      }
+
+      function edgeStyleFromNodeProps(props) {
+        return normalizeEdgeStyle({
+          stroke: props.edge_color || props.edge_stroke,
+          width: props.edge_width,
+          dash: props.edge_dash,
+          arrow: props.edge_arrow
+        });
+      }
+
+      function applyEdgeAppearance(path, lbl, edge) {
+        if (!path) return;
+        const st = edge.style || {};
+
+        if (st.stroke) {
+          path.setAttribute('stroke', st.stroke);
+          if (lbl) lbl.setAttribute('fill', st.stroke);
+        } else {
+          path.removeAttribute('stroke');
+          if (lbl) lbl.removeAttribute('fill');
+        }
+        if (st.width != null) {
+          path.setAttribute('stroke-width', String(st.width));
+        } else {
+          path.removeAttribute('stroke-width');
+        }
+        if (st.dash) {
+          path.setAttribute('stroke-dasharray', st.dash);
+        } else {
+          path.removeAttribute('stroke-dasharray');
+        }
+        if (st.arrow === false) {
+          path.removeAttribute('marker-end');
+        } else {
+          path.setAttribute('marker-end', 'url(#arrow)');
+        }
+      }
+
+      function createEdgeDom(edge, idx) {
+        const edgeId = `edge_${edge.u}_${edge.v}_${idx}`;
+        const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+        g.id = edgeId;
+        const safeLabel = String(edge.label || '').replace(/</g, '');
+        g.innerHTML = `
+            <path id="path_${edgeId}" class="edge-path" marker-end="url(#arrow)" />
+            <text id="lbl_${edgeId}" class="edge-label">${safeLabel}</text>
+          `;
+        edgesLayer.appendChild(g);
+        applyEdgeAppearance(
+          document.getElementById('path_' + edgeId),
+          document.getElementById('lbl_' + edgeId),
+          edge
+        );
+      }
+
+      // ズーム＆パンの状態
+      let vb = { x: 0, y: 0, w: window.innerWidth || 1080, h: window.innerHeight || 720 };
+      function updateViewBox() {
+        if (!isFinite(vb.x) || !isFinite(vb.y) || !isFinite(vb.w) || !isFinite(vb.h) || vb.w <= 10 || vb.h <= 10) {
+          vb = { x: 0, y: 0, w: window.innerWidth || 1080, h: window.innerHeight || 720 };
+        }
+        svg.setAttribute('viewBox', `${vb.x} ${vb.y} ${vb.w} ${vb.h}`);
+      }
+
+      function initZoomPan() {
+        vb.w = window.innerWidth || 1080;
+        vb.h = window.innerHeight || 720;
+        updateViewBox();
+
+        window.addEventListener('resize', () => {
+          vb.w = window.innerWidth;
+          vb.h = window.innerHeight;
+          updateViewBox();
+        });
+
+        // ホイールズーム
+        svg.addEventListener('wheel', (e) => {
+          e.preventDefault();
+          const zoomFactor = e.deltaY > 0 ? 1.08 : 0.92;
+          const rect = svg.getBoundingClientRect();
+          const mouseX = e.clientX - rect.left;
+          const mouseY = e.clientY - rect.top;
+
+          const svgX = vb.x + (mouseX / rect.width) * vb.w;
+          const svgY = vb.y + (mouseY / rect.height) * vb.h;
+
+          vb.w *= zoomFactor;
+          vb.h *= zoomFactor;
+          vb.x = svgX - (mouseX / rect.width) * vb.w;
+          vb.y = svgY - (mouseY / rect.height) * vb.h;
+          updateViewBox();
+        }, { passive: false });
+
+        // 背景ドラッグ (パン移動)
+        let isPanning = false, startPanX, startPanY;
+        svg.addEventListener('pointerdown', (e) => {
+          if (e.target.id === 'canvas' || (e.target.tagName === 'rect' && e.target.getAttribute('fill') === 'url(#grid)')) {
+            isPanning = true;
+            svg.setPointerCapture(e.pointerId);
+            startPanX = e.clientX;
+            startPanY = e.clientY;
+          }
+        });
+        svg.addEventListener('pointermove', (e) => {
+          if (!isPanning) return;
+          const rect = svg.getBoundingClientRect();
+          const svgW = rect.width > 0 ? rect.width : (window.innerWidth || 1080);
+          const svgH = rect.height > 0 ? rect.height : (window.innerHeight || 720);
+          const dx = (e.clientX - startPanX) * (vb.w / svgW);
+          const dy = (e.clientY - startPanY) * (vb.h / svgH);
+          vb.x -= dx;
+          vb.y -= dy;
+          startPanX = e.clientX;
+          startPanY = e.clientY;
+          updateViewBox();
+        });
+        function endPan(e) {
+          if (!isPanning) return;
+          isPanning = false;
+          try { svg.releasePointerCapture(e.pointerId); } catch(_) {}
+        }
+        svg.addEventListener('pointerup', endPan);
+        svg.addEventListener('pointercancel', endPan);
+      }
+
+      function calcEdgePath(ux_raw, uy_raw, uw_raw, uh_raw, vx_raw, vy_raw, vw_raw, vh_raw) {
+        const ux = safeNum(ux_raw, 0), uy = safeNum(uy_raw, 0);
+        const uw = Math.max(20, safeNum(uw_raw, 180)), uh = Math.max(20, safeNum(uh_raw, 80));
+        const vx = safeNum(vx_raw, 0), vy = safeNum(vy_raw, 0);
+        const vw = Math.max(20, safeNum(vw_raw, 180)), vh = Math.max(20, safeNum(vh_raw, 80));
+
+        const cx_u = ux + uw / 2, cy_u = uy + uh / 2;
+        const cx_v = vx + vw / 2, cy_v = vy + vh / 2;
+        const dx = cx_v - cx_u, dy = cy_v - cy_u;
+        let p1 = [ux + uw, cy_u], p2 = [vx, cy_v];
+        let c1 = [p1[0] + 30, p1[1]], c2 = [p2[0] - 30, p2[1]];
+
+        if (Math.abs(dx) >= Math.abs(dy)) {
+          if (dx >= 0) {
+            p1 = [ux + uw, cy_u]; p2 = [vx, cy_v];
+            const dist = Math.max(30, Math.abs(dx) * 0.45);
+            c1 = [p1[0] + dist, p1[1]]; c2 = [p2[0] - dist, p2[1]];
+          } else {
+            p1 = [ux, cy_u]; p2 = [vx + vw, cy_v];
+            const dist = Math.max(30, Math.abs(dx) * 0.45);
+            c1 = [p1[0] - dist, p1[1]]; c2 = [p2[0] + dist, p2[1]];
+          }
+        } else {
+          if (dy >= 0) {
+            p1 = [cx_u, uy + uh]; p2 = [cx_v, vy];
+            const dist = Math.max(30, Math.abs(dy) * 0.45);
+            c1 = [p1[0], p1[1] + dist]; c2 = [p2[0], p2[1] - dist];
+          } else {
+            p1 = [cx_u, uy]; p2 = [cx_v, vy + vh];
+            const dist = Math.max(30, Math.abs(dy) * 0.45);
+            c1 = [p1[0], p1[1] - dist]; c2 = [p2[0], p2[1] + dist];
+          }
+        }
+        return {
+          d: `M ${safeFixed(p1[0])} ${safeFixed(p1[1])} C ${safeFixed(c1[0])} ${safeFixed(c1[1])}, ${safeFixed(c2[0])} ${safeFixed(c2[1])}, ${safeFixed(p2[0])} ${safeFixed(p2[1])}`,
+          mx: (safeNum(p1[0]) + safeNum(p2[0])) / 2,
+          my: (safeNum(p1[1]) + safeNum(p2[1])) / 2 - 10
+        };
+      }
+
+      function updateEdges() {
+        edges.forEach((edge, idx) => {
+          const u = objects.get(edge.u);
+          const v = objects.get(edge.v);
+          if (!u || !v) return;
+
+          const edgeId = `edge_${edge.u}_${edge.v}_${idx}`;
+          const path = document.getElementById('path_' + edgeId);
+          const lbl = document.getElementById('lbl_' + edgeId);
+          if (!path) return;
+
+          const res = calcEdgePath(u.x, u.y, u.w, u.h, v.x, v.y, v.w, v.h);
+          path.setAttribute('d', res.d);
+          applyEdgeAppearance(path, lbl, edge);
+          if (lbl) {
+            lbl.setAttribute('x', res.mx);
+            lbl.setAttribute('y', res.my);
+          }
+        });
+      }
+
+      // 🌟 領域（Group）のオートフィット計算 (心地よい余白付き)
+      function updateGroups() {
+        objects.forEach(gObj => {
+          if (gObj.type !== 'group' || !gObj.data || !gObj.data.contains) return;
+          const childIds = String(gObj.data.contains)
+            .split(/[\s,]+/)
+            .map(s => s.trim())
+            .filter(Boolean);
+          if (childIds.length === 0) return;
+
+          let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+          let count = 0;
+
+          childIds.forEach(cId => {
+            const child = objects.get(cId);
+            if (!child) return;
+            const cx = safeNum(child.x, 0);
+            const cy = safeNum(child.y, 0);
+            const cw = Math.max(20, safeNum(child.w, 180));
+            const ch = Math.max(20, safeNum(child.h, 80));
+
+            minX = Math.min(minX, cx);
+            minY = Math.min(minY, cy);
+            maxX = Math.max(maxX, cx + cw);
+            maxY = Math.max(maxY, cy + ch);
+            count++;
+          });
+
+          if (count === 0 || !isFinite(minX) || !isFinite(maxX)) return;
+
+          // 心地よい余白 (左右・下: 28px, 上部ヘッダー余裕: 38px)
+          const pad = 28;
+          const padTop = 38;
+
+          gObj.x = minX - pad;
+          gObj.y = minY - padTop;
+          gObj.w = (maxX - minX) + pad * 2;
+          gObj.h = (maxY - minY) + pad + padTop;
+          if (gObj.data) {
+            gObj.data.x = gObj.x;
+            gObj.data.y = gObj.y;
+            gObj.data.w = gObj.w;
+            gObj.data.h = gObj.h;
+          }
+
+          const gEl = document.getElementById('obj_' + gObj.id);
+          if (gEl) {
+            gEl.setAttribute('transform', `translate(${gObj.x}, ${gObj.y})`);
+            const rect = gEl.querySelector('rect');
+            if (rect) {
+              rect.setAttribute('width', gObj.w);
+              rect.setAttribute('height', gObj.h);
+            }
+            const subText = gEl.querySelector('.group-sub');
+            if (subText) {
+              subText.setAttribute('y', gObj.h - 12);
+            }
+          }
+        });
+      }
+
+      // 🌟 選択・フォーカス状態と詳細パネル管理
+      let selectedNodeId = null;
+
+      // 🌟 マイクロMarkdown & KaTeX & SVG レンダラー (容量ゼロ・30行軽量エンジン)
+      function renderMicroMarkdown(md, container) {
+        if (!md) return;
+        const lines = md.split('\n');
+        let listEl = null;
+
+        for (let li = 0; li < lines.length; li++) {
+          const line = lines[li].trim();
+          if (!line) {
+            listEl = null;
+            continue;
+          }
+
+          if (CanvasTable.isMarkdownRow(line)) {
+            listEl = null;
+            const block = [];
+            while (li < lines.length && CanvasTable.isMarkdownRow(lines[li].trim())) {
+              block.push(lines[li].trim());
+              li++;
+            }
+            li--;
+            CanvasTable.appendTable(container, CanvasTable.parseMarkdownBlock(block), {
+              richCells: renderInlineFormatting
+            });
+            continue;
+          }
+
+          if (line.startsWith('# ')) {
+            listEl = null;
+            const h1 = document.createElement('h1');
+            renderInlineFormatting(line.slice(2).trim(), h1);
+            container.appendChild(h1);
+            continue;
+          }
+          if (line.startsWith('## ')) {
+            listEl = null;
+            const h2 = document.createElement('h2');
+            renderInlineFormatting(line.slice(3).trim(), h2);
+            container.appendChild(h2);
+            continue;
+          }
+
+          if (line.startsWith('- ') || line.startsWith('* ')) {
+            if (!listEl) {
+              listEl = document.createElement('ul');
+              container.appendChild(listEl);
+            }
+            const liEl = document.createElement('li');
+            renderInlineFormatting(line.slice(2).trim(), liEl);
+            listEl.appendChild(liEl);
+            continue;
+          }
+          listEl = null;
+
+          if (line.startsWith('$$') && line.endsWith('$$') && line.length > 4) {
+            const mathBox = document.createElement('div');
+            mathBox.className = 'math-block';
+            renderKatexInto(mathBox, line.slice(2, -2), true);
+            container.appendChild(mathBox);
+            continue;
+          }
+
+          if (line.startsWith('<svg') && line.endsWith('</svg>')) {
+            const svgBox = document.createElement('div');
+            svgBox.style.cssText = 'margin:12px 0; text-align:center; overflow-x:auto;';
+            svgBox.innerHTML = line;
+            container.appendChild(svgBox);
+            continue;
+          }
+
+          const p = document.createElement('p');
+          renderInlineFormatting(line, p);
+          container.appendChild(p);
+        }
+      }
+
+      function isDetailPanelOpen() {
+        const panel = document.getElementById('detail-panel');
+        return !!(panel && panel.classList.contains('open'));
+      }
+
+      function updateConnectionSummary(id) {
+        const connLabel = document.getElementById('panel-connections');
+        if (!connLabel || !id) return;
+        const inCount = edges.filter(e => e.v === id).length;
+        const outCount = edges.filter(e => e.u === id).length;
+        connLabel.textContent = `🔗 接続: ← 入力 ${inCount}件 / 出力 → ${outCount}件`;
+      }
+
+      function appendConnectionSection(id, body) {
+        const incoming = edges.filter(e => e.v === id);
+        const outgoing = edges.filter(e => e.u === id);
+        if (!incoming.length && !outgoing.length) return;
+
+        const sec = document.createElement('div');
+        sec.className = 'panel-conn-section';
+        const h2 = document.createElement('h2');
+        h2.textContent = '接続一覧';
+        sec.appendChild(h2);
+        const ul = document.createElement('ul');
+
+        const addRow = (dir, peerId, label) => {
+          const li = document.createElement('li');
+          const btn = document.createElement('button');
+          btn.type = 'button';
+          btn.className = 'panel-conn-jump';
+          const arrow = dir === 'in' ? '←' : '→';
+          const lbl = label ? ` 「${label}」` : '';
+          btn.textContent = `${arrow} ${peerId}${lbl}`;
+          btn.addEventListener('click', (ev) => {
+            ev.stopPropagation();
+            selectNode(peerId, { openDetail: true });
+          });
+          li.appendChild(btn);
+          ul.appendChild(li);
+        };
+
+        incoming.forEach(e => addRow('in', e.u, e.label));
+        outgoing.forEach(e => addRow('out', e.v, e.label));
+        sec.appendChild(ul);
+        body.appendChild(sec);
+      }
+
+      function selectNode(id, opts) {
+        const openDetail = !opts || opts.openDetail !== false;
+
+        if (selectedNodeId) {
+          const oldEl = document.getElementById('obj_' + selectedNodeId);
+          if (oldEl) oldEl.classList.remove('selected');
+        }
+
+        if (!id || !objects.has(id)) {
+          selectedNodeId = null;
+          closeDetailPanel({ clearSelection: true });
+          return;
+        }
+
+        const obj = objects.get(id);
+        if (obj.type === 'group') {
+          selectedNodeId = null;
+          closeDetailPanel({ clearSelection: true });
+          return;
+        }
+
+        selectedNodeId = id;
+        const el = document.getElementById('obj_' + id);
+        if (el) el.classList.add('selected');
+
+        updateConnectionSummary(id);
+
+        if (!openDetail) {
+          logBar.innerText = `[フォーカス] ノード '${id}'`;
+          return;
+        }
+
+        const panel = document.getElementById('detail-panel');
+        const badge = document.getElementById('panel-type-badge');
+        const idLabel = document.getElementById('panel-node-id');
+        const body = document.getElementById('panel-body');
+
+        if (panel && body) {
+          if (badge) badge.textContent = obj.type.toUpperCase();
+          if (idLabel) idLabel.textContent = '#' + obj.id;
+
+          body.innerHTML = '';
+          const d = obj.data || {};
+
+          if (d.detail) {
+            renderMicroMarkdown(unescapeDetailMarkdown(d.detail), body);
+          } else {
+            // 容量ゼロ設計：既存属性から自動生成
+            const titleEl = document.createElement('h1');
+            titleEl.textContent = d.title || obj.id;
+            body.appendChild(titleEl);
+
+            if (d.sub) {
+              const subEl = document.createElement('p');
+              subEl.style.cssText = 'color:var(--card-sub); font-size:12px; margin-top:-2px;';
+              subEl.textContent = d.sub;
+              body.appendChild(subEl);
+            }
+
+            if (d.content) {
+              const contentEl = document.createElement('p');
+              contentEl.textContent = d.content;
+              body.appendChild(contentEl);
+            }
+
+            if (obj.type === 'math' && d.latex) {
+              const mathBox = document.createElement('div');
+              mathBox.className = 'math-block';
+              renderKatexInto(mathBox, d.latex, true);
+              body.appendChild(mathBox);
+            }
+
+            if (obj.type === 'svg' && d.svg_content) {
+              const svgBox = document.createElement('div');
+              svgBox.style.cssText = 'margin:12px 0; text-align:center;';
+              svgBox.innerHTML = d.svg_content;
+              body.appendChild(svgBox);
+            }
+
+            if (obj.type === 'table' && (d.headers || d.rows)) {
+              CanvasTable.appendTable(
+                body,
+                CanvasTable.parseNodeFields(d.headers || d.cols, d.rows),
+                { firstColEmphasis: true }
+              );
+            }
+
+            const autoNote = document.createElement('div');
+            autoNote.style.cssText = 'margin-top:16px; padding:8px 10px; background:rgba(255,255,255,0.03); border-radius:6px; font-size:11px; color:var(--log-color); border-left:2px solid var(--brand-color);';
+            autoNote.innerHTML = '💡 <strong>ヒント:</strong> DSLに <code>detail="..."</code> を記述すると、Markdown・数式・SVGによる専用解説を展開できます。';
+            body.appendChild(autoNote);
+          }
+
+          appendConnectionSection(id, body);
+          panel.classList.add('open');
+        }
+        logBar.innerText = `[選択] ノード '${id}' を選択しました (詳細パネル表示)`;
+      }
+
+      function closeDetailPanel(opts) {
+        const clearSelection = opts && opts.clearSelection;
+        const panel = document.getElementById('detail-panel');
+        if (panel) panel.classList.remove('open');
+        if (clearSelection && selectedNodeId) {
+          const oldEl = document.getElementById('obj_' + selectedNodeId);
+          if (oldEl) oldEl.classList.remove('selected');
+          selectedNodeId = null;
+          const connLabel = document.getElementById('panel-connections');
+          if (connLabel) connLabel.textContent = '🔗 接続: なし';
+        }
+      }
+
+      // キャンバス背景クリックで詳細パネルを閉じる
+      svg.addEventListener('click', (e) => {
+        if (e.target.id === 'canvas' || (e.target.tagName === 'rect' && e.target.getAttribute('fill') === 'url(#grid)')) {
+          closeDetailPanel();
+        }
+      });
+
+      // 🌟 方向キーでの空間的フォーカス移動 (Spatial Navigation)
+      window.addEventListener('keydown', (e) => {
+        const activeTag = document.activeElement ? document.activeElement.tagName.toLowerCase() : '';
+        if (activeTag === 'input' || activeTag === 'textarea') return;
+
+        if (e.key === 'Escape') {
+          closeDetailPanel();
+          Canvas.toggleHelp(false);
+          return;
+        }
+
+        if (e.key === '?' && !e.ctrlKey && !e.metaKey && !e.altKey) {
+          e.preventDefault();
+          Canvas.toggleHelp();
+          return;
+        }
+
+        const keepPanelOpen = isDetailPanelOpen();
+        const focusOpts = { openDetail: keepPanelOpen };
+
+        const dirMap = {
+          'ArrowRight': 'R',
+          'ArrowLeft':  'L',
+          'ArrowDown':  'D',
+          'ArrowUp':    'U'
+        };
+        const dir = dirMap[e.key];
+        if (!dir) return;
+
+        const nodeList = Array.from(objects.values()).filter(o => o.type !== 'group');
+        if (nodeList.length === 0) return;
+
+        e.preventDefault();
+
+        // 選択中ノードがなければ左上のノードを選択
+        if (!selectedNodeId || !objects.has(selectedNodeId)) {
+          nodeList.sort((a, b) => (a.x + a.y) - (b.x + b.y));
+          selectNode(nodeList[0].id, focusOpts);
+          return;
+        }
+
+        const curr = objects.get(selectedNodeId);
+        const currCx = curr.x + curr.w / 2;
+        const currCy = curr.y + curr.h / 2;
+
+        let bestNode = null;
+        let bestDist = Infinity;
+
+        nodeList.forEach(cand => {
+          if (cand.id === curr.id) return;
+          const candCx = cand.x + cand.w / 2;
+          const candCy = cand.y + cand.h / 2;
+          const dx = candCx - currCx;
+          const dy = candCy - currCy;
+
+          let inCone = false;
+          let primaryDist = 0;
+          let secondaryDist = 0;
+
+          if (dir === 'R') {
+            inCone = (dx > 10) && (Math.abs(dy) <= dx * 1.5);
+            primaryDist = dx; secondaryDist = Math.abs(dy);
+          } else if (dir === 'L') {
+            inCone = (dx < -10) && (Math.abs(dy) <= (-dx) * 1.5);
+            primaryDist = -dx; secondaryDist = Math.abs(dy);
+          } else if (dir === 'D') {
+            inCone = (dy > 10) && (Math.abs(dx) <= dy * 1.5);
+            primaryDist = dy; secondaryDist = Math.abs(dx);
+          } else if (dir === 'U') {
+            inCone = (dy < -10) && (Math.abs(dx) <= (-dy) * 1.5);
+            primaryDist = -dy; secondaryDist = Math.abs(dx);
+          }
+
+          if (inCone) {
+            const score = primaryDist + secondaryDist * 1.2;
+            if (score < bestDist) {
+              bestDist = score;
+              bestNode = cand;
+            }
+          }
+        });
+
+        // コーン内で見つからなければ同半平面の最近傍
+        if (!bestNode) {
+          nodeList.forEach(cand => {
+            if (cand.id === curr.id) return;
+            const candCx = cand.x + cand.w / 2;
+            const candCy = cand.y + cand.h / 2;
+            const dx = candCx - currCx;
+            const dy = candCy - currCy;
+
+            let inHalf = false;
+            if (dir === 'R' && dx > 10) inHalf = true;
+            if (dir === 'L' && dx < -10) inHalf = true;
+            if (dir === 'D' && dy > 10) inHalf = true;
+            if (dir === 'U' && dy < -10) inHalf = true;
+
+            if (inHalf) {
+              const dist = Math.hypot(dx, dy);
+              if (dist < bestDist) {
+                bestDist = dist;
+                bestNode = cand;
+              }
+            }
+          });
+        }
+
+        if (bestNode) {
+          selectNode(bestNode.id, focusOpts);
+        }
+      });
+
+      // 🌟 中央集権型ドラッグ＆クリックマネージャー
+      let activeDrag = null; // { id, el, startX, startY, initX, initY, moved }
+
+      window.addEventListener('pointermove', (e) => {
+        if (!activeDrag) return;
+        const dragDist = Math.hypot(e.clientX - activeDrag.startX, e.clientY - activeDrag.startY);
+        if (dragDist > 5) {
+          activeDrag.moved = true;
+        }
+        if (!activeDrag.moved) return;
+
+        const rect = svg.getBoundingClientRect();
+        const svgW = rect.width > 0 ? rect.width : (window.innerWidth || 1080);
+        const svgH = rect.height > 0 ? rect.height : (window.innerHeight || 720);
+        let scaleX = vb.w / svgW;
+        let scaleY = vb.h / svgH;
+        if (!isFinite(scaleX) || scaleX <= 0) scaleX = 1;
+        if (!isFinite(scaleY) || scaleY <= 0) scaleY = 1;
+
+        const obj = objects.get(activeDrag.id);
+        if (!obj) return;
+
+        obj.x = activeDrag.initX + (e.clientX - activeDrag.startX) * scaleX;
+        obj.y = activeDrag.initY + (e.clientY - activeDrag.startY) * scaleY;
+        if (obj.data) {
+          obj.data.x = obj.x;
+          obj.data.y = obj.y;
+        }
+        activeDrag.el.setAttribute('transform', `translate(${obj.x}, ${obj.y})`);
+        updateEdges();
+        updateGroups();
+      });
+
+      function onDragEnd() {
+        if (!activeDrag) return;
+        const id = activeDrag.id;
+        const el = activeDrag.el;
+        const wasMoved = activeDrag.moved;
+        el.classList.remove('dragging');
+        activeDrag = null;
+
+        // ドラッグ移動していなければ「ノードクリック（選択）」と判定！
+        if (!wasMoved) {
+          selectNode(id, { openDetail: true });
+          return;
+        }
+
+        const obj = objects.get(id);
+        if (!obj) return;
+        obj.manualPos = true;
+        updateGroups();
+        logBar.innerText = `[操作] ${obj.type} '${id}' を (${Math.round(obj.x)}, ${Math.round(obj.y)}) へ移動`;
+
+        if (window.pywebview && window.pywebview.api && window.pywebview.api.sync_canvas_state) {
+          window.pywebview.api.sync_canvas_state(id, obj.type, obj.x, obj.y, Canvas.getFullState())
+            .then(() => { logBar.innerText = `[同期完了] AIとファイル(canvas_state.json)へ完全保存しました！`; })
+            .catch(err => { console.error(err); });
+        }
+      }
+
+      window.addEventListener('pointerup', onDragEnd);
+      window.addEventListener('pointercancel', onDragEnd);
+
+      function setupDraggable(el, id) {
+        el.addEventListener('pointerdown', (e) => {
+          if (e.button !== 0) return; // 左クリックのみ
+          e.preventDefault();
+          e.stopPropagation();
+
+          const obj = objects.get(id);
+          if (!obj) return;
+
+          el.classList.add('dragging');
+          activeDrag = {
+            id: id,
+            el: el,
+            startX: e.clientX,
+            startY: e.clientY,
+            initX: obj.x,
+            initY: obj.y,
+            moved: false
+          };
+        });
+      }
+
+      function buildEmbeddedDslScriptTag(dsl) {
+        const body = utf8ToBase64(String(dsl));
+        return (
+          '<script type="text/plain" id="canvas-initial-dsl" data-encoding="base64">' +
+          body +
+          '<' +
+          '/script>'
+        );
+      }
+
+      function injectExportDsl(html, dsl) {
+        const tag = buildEmbeddedDslScriptTag(dsl);
+        const re = /<script\s+[^>]*id="canvas-initial-dsl"[^>]*>[\s\S]*?<\/script>/i;
+        if (!re.test(html)) {
+          return html;
+        }
+        return html.replace(re, tag);
+      }
+
+      function stripExportRuntimeDom(rootEl) {
+        if (!rootEl || !rootEl.querySelector) return;
+        const ol = rootEl.querySelector('#objects-layer');
+        const el = rootEl.querySelector('#edges-layer');
+        if (ol) ol.innerHTML = '';
+        if (el) el.innerHTML = '';
+        const panel = rootEl.querySelector('#detail-panel');
+        if (panel) {
+          panel.classList.remove('open');
+          const body = rootEl.querySelector('#panel-body');
+          if (body) body.innerHTML = '';
+        }
+        const help = rootEl.querySelector('#help-overlay');
+        if (help) help.classList.remove('open');
+        const log = rootEl.querySelector('#log-bar');
+        if (log) log.textContent = '単体スナップショット（起動時に DSL から復元）';
+      }
+
+      async function assembleExportHtml(dsl) {
+        let html = null;
+        const api = window.pywebview && window.pywebview.api;
+        if (api && typeof api.get_export_shell === 'function') {
+          try {
+            html = await api.get_export_shell();
+          } catch (err) {
+            console.warn('[export] get_export_shell', err);
+          }
+        }
+        if (!html) {
+          try {
+            const resp = await fetch('index.html', { cache: 'no-store' });
+            if (resp.ok) html = await resp.text();
+          } catch (_) {}
+        }
+        if (html) {
+          if (!/^\s*<!DOCTYPE/i.test(html)) html = '<!DOCTYPE html>\n' + html;
+          return injectExportDsl(html, dsl);
+        }
+        const docClone = document.documentElement.cloneNode(true);
+        stripExportRuntimeDom(docClone);
+        return injectExportDsl('<!DOCTYPE html>\n' + docClone.outerHTML, dsl);
+      }
+
+      return {
+        registerComponent: function(type, componentDef) {
+          registry.set(type, componentDef);
+        },
+        getFullState: function() {
+          const objs = [];
+          objects.forEach(o => {
+            const cleanData = Object.assign({}, o.data);
+            const item = {
+              id: o.id,
+              type: o.type,
+              w: o.w,
+              h: o.h
+            };
+            if (o.manualPos) {
+              item.x = Math.round(o.x);
+              item.y = Math.round(o.y);
+              cleanData.x = item.x;
+              cleanData.y = item.y;
+            } else {
+              delete cleanData.x;
+              delete cleanData.y;
+            }
+            item.data = cleanData;
+            objs.push(item);
+          });
+          const edgeOut = edges.map((e) => {
+            const item = { u: e.u, v: e.v, label: e.label || '' };
+            const st = normalizeEdgeStyle(e.style);
+            if (st) item.style = st;
+            return item;
+          });
+          return {
+            schema_version: CANVAS_SCHEMA_VERSION,
+            timestamp: new Date().toISOString(),
+            objects: objs,
+            edges: edgeOut
+          };
+        },
+        clear: function(skipSync) {
+          closeDetailPanel({ clearSelection: true });
+          objects.clear();
+          edges.length = 0;
+          objectsLayer.innerHTML = '';
+          edgesLayer.innerHTML = '';
+          if (!skipSync) {
+            this.syncToPython();
+          }
+          logBar.innerText = '[クリア] キャンバスをリセットしました';
+        },
+        loadFromState: function(state) {
+          if (!state || !Array.isArray(state.objects) || state.objects.length === 0) {
+            return false;
+          }
+          this.clear(true);
+          const sorted = state.objects.slice().sort((a, b) => {
+            if (a.type === 'group' && b.type !== 'group') return -1;
+            if (b.type === 'group' && a.type !== 'group') return 1;
+            return 0;
+          });
+          sorted.forEach((item) => {
+            const data = Object.assign({}, item.data || {}, { id: item.id });
+            if (item.x !== undefined && item.y !== undefined) {
+              data.x = item.x;
+              data.y = item.y;
+            }
+            this.spawn(item.type, data);
+          });
+          (state.edges || []).forEach((e) => {
+            if (e && e.u && e.v) {
+              this.connect(e.u, e.v, { label: e.label || '', style: e.style });
+            }
+          });
+          this.autoLayout('LR');
+          sorted.forEach((item) => {
+            const data = item.data || {};
+            if (data.x !== undefined && data.y !== undefined) {
+              const obj = objects.get(item.id);
+              if (!obj) return;
+              obj.x = safeNum(data.x, obj.x);
+              obj.y = safeNum(data.y, obj.y);
+              obj.manualPos = true;
+              const el = document.getElementById('obj_' + item.id);
+              if (el) el.setAttribute('transform', `translate(${obj.x}, ${obj.y})`);
+            }
+          });
+          updateEdges();
+          updateGroups();
+          this.fitView();
+          this.syncToPython();
+          return true;
+        },
+        spawn: function(type, data) {
+          const comp = registry.get(type);
+          if (!comp) {
+            console.error(`Unknown component type: ${type}`);
+            return;
+          }
+          // 既存要素の重複防止 (同名IDがあれば古いDOMを安全に破棄)
+          const oldEl = document.getElementById('obj_' + data.id);
+          if (oldEl) {
+            oldEl.remove();
+          }
+
+          const dims = comp.getDimensions ? comp.getDimensions(data) : { w: 180, h: 80 };
+          const hasManualPos = (data.x !== undefined && data.y !== undefined);
+          const obj = {
+            id: data.id,
+            type: type,
+            x: hasManualPos ? safeNum(data.x, 100) : 100,
+            y: hasManualPos ? safeNum(data.y, 100) : 100,
+            w: dims.w,
+            h: dims.h,
+            manualPos: hasManualPos,
+            data: data
+          };
+          objects.set(data.id, obj);
+
+          const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+          g.id = 'obj_' + data.id;
+          g.classList.add('canvas-obj');
+          g.setAttribute('transform', `translate(${obj.x}, ${obj.y})`);
+
+          // 当たり判定プレート (hit-box)
+          const isGroup = (type === 'group');
+          const hitBox = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+          hitBox.setAttribute('width', dims.w);
+          hitBox.setAttribute('height', dims.h);
+          hitBox.setAttribute('rx', isGroup ? '14' : '10');
+          hitBox.setAttribute('fill', isGroup ? (data.bg || 'var(--group-bg)') : 'var(--hit-box-fill)');
+          hitBox.setAttribute('stroke', isGroup ? (data.color || 'var(--group-border)') : 'transparent');
+          if (isGroup) {
+            hitBox.setAttribute('stroke-dasharray', '6,4');
+            hitBox.setAttribute('stroke-width', '1.6');
+          }
+          hitBox.style.cursor = 'grab';
+          g.appendChild(hitBox);
+
+          // コンポーネント描画
+          comp.render(data, g, dims);
+
+          setupDraggable(g, data.id);
+          if (isGroup) {
+            objectsLayer.insertBefore(g, objectsLayer.firstChild);
+          } else {
+            objectsLayer.appendChild(g);
+          }
+          updateEdges();
+          return obj;
+        },
+        connect: function(uId, vId, labelOrOpts, styleLegacy) {
+          let label = '';
+          let style = null;
+          if (labelOrOpts && typeof labelOrOpts === 'object') {
+            label = labelOrOpts.label || '';
+            style = normalizeEdgeStyle(labelOrOpts.style);
+          } else {
+            label = labelOrOpts || '';
+            style = normalizeEdgeStyle(styleLegacy);
+          }
+          const existing = edges.find(e => e.u === uId && e.v === vId);
+          if (existing) {
+            if (style) {
+              existing.style = Object.assign({}, existing.style || {}, style);
+              updateEdges();
+            }
+            return;
+          }
+
+          const edge = { u: uId, v: vId, label };
+          if (style) edge.style = style;
+          edges.push(edge);
+          createEdgeDom(edge, edges.length - 1);
+          updateEdges();
+        },
+        // 🌟 自動レイアウトエンジン (水平 LR / 垂直 TB)
+        autoLayout: function(direction = 'LR') {
+          const inDegree = new Map();
+          const adj = new Map();
+          objects.forEach((obj, id) => {
+            if (obj.type === 'group') return;
+            inDegree.set(id, 0);
+            adj.set(id, []);
+          });
+          edges.forEach(e => {
+            if (adj.has(e.u)) adj.get(e.u).push(e.v);
+            if (inDegree.has(e.v)) inDegree.set(e.v, inDegree.get(e.v) + 1);
+          });
+
+          // レベル（階層）判定
+          const levels = new Map();
+          const queue = [];
+          inDegree.forEach((deg, id) => {
+            if (deg === 0) { queue.push(id); levels.set(id, 0); }
+          });
+          if (queue.length === 0 && inDegree.size > 0) {
+            const firstId = inDegree.keys().next().value;
+            queue.push(firstId); levels.set(firstId, 0);
+          }
+
+          while (queue.length > 0) {
+            const u = queue.shift();
+            const currLvl = levels.get(u) || 0;
+            (adj.get(u) || []).forEach(v => {
+              const nextLvl = currLvl + 1;
+              if (!levels.has(v) || nextLvl > levels.get(v)) {
+                levels.set(v, nextLvl);
+                queue.push(v);
+              }
+            });
+          }
+
+          // レベルごとのグループ分け
+          const levelGroups = new Map();
+          objects.forEach((obj, id) => {
+            if (obj.type === 'group') return;
+            const lvl = levels.get(id) || 0;
+            if (!levelGroups.has(lvl)) levelGroups.set(lvl, []);
+            levelGroups.get(lvl).push(id);
+          });
+
+          // 配置座標計算
+          const startX = 80, startY = 120;
+          const gapX = direction === 'LR' ? 320 : 160;
+          const gapY = direction === 'LR' ? 140 : 200;
+
+          levelGroups.forEach((ids, lvl) => {
+            ids.forEach((id, rank) => {
+              const obj = objects.get(id);
+              if (!obj) return;
+              if (direction === 'LR') {
+                obj.x = startX + lvl * gapX;
+                obj.y = startY + rank * gapY;
+              } else {
+                obj.x = startX + rank * gapX;
+                obj.y = startY + lvl * gapY;
+              }
+              obj.manualPos = false;
+              if (obj.data) {
+                obj.data.x = obj.x;
+                obj.data.y = obj.y;
+              }
+              const el = document.getElementById('obj_' + id);
+              if (el) el.setAttribute('transform', `translate(${obj.x}, ${obj.y})`);
+            });
+          });
+
+          updateEdges();
+          updateGroups();
+          this.syncToPython();
+          logBar.innerText = `[整列完了] ${direction === 'LR' ? '水平フロー' : '垂直ツリー'}に自動整列しました！`;
+        },
+        // 🌟 簡易DSLパーサ (テキストから一括生成)
+        applyDSL: function(dslText) {
+          const dslPositions = new Map();
+          const lines = dslText.split('\n');
+          lines.forEach(line => {
+            line = line.trim();
+            if (!line || line.startsWith('#')) return;
+
+            // クリア指示
+            if (line.toLowerCase() === 'clear' || line.toLowerCase() === 'reset') {
+              this.clear();
+              return;
+            }
+
+            // 例: card: c1 [title="光の問い", sub="謎", to=c2, label="関係"]
+            const m = line.match(/^([a-z]+):\s*([a-zA-Z0-9_-]+)\s*\[(.*)\]$/);
+            if (!m) return;
+            const type = m[1];
+            const id = m[2];
+            const rawProps = m[3];
+
+            const props = { id: id };
+            const propMatches = rawProps.matchAll(/([a-zA-Z0-9_-]+)=(?:"([^"]*)"|'([^']*)'|([^\s,\]]+))/g);
+            for (const pm of propMatches) {
+              props[pm[1]] = pm[2] !== undefined ? pm[2] : (pm[3] !== undefined ? pm[3] : pm[4]);
+            }
+
+            if (type === 'edge') {
+              const fromId = props.from || props.u;
+              const toId = props.to || props.v;
+              if (fromId && toId) {
+                const edgeLabel = props.label || props.link || '';
+                const style = normalizeEdgeStyle({
+                  stroke: props.color || props.stroke,
+                  width: props.width,
+                  dash: props.dash,
+                  arrow: props.arrow
+                });
+                this.connect(fromId, toId, { label: edgeLabel, style });
+              }
+              return;
+            }
+
+            if (props.x !== undefined && props.y !== undefined && !(type === 'group' && props.contains)) {
+              dslPositions.set(id, {
+                x: safeNum(props.x, 0),
+                y: safeNum(props.y, 0)
+              });
+            }
+
+            // オブジェクト生成
+            this.spawn(type, props);
+
+            // 接続指定 (to="target_id", label="...") + 任意 edge_* スタイル
+            if (props.to) {
+              const edgeLabel = props.link || props.edge || props.label || '';
+              const style = edgeStyleFromNodeProps(props);
+              this.connect(props.to, id, { label: edgeLabel, style });
+            }
+          });
+          this.autoLayout('LR');
+          if (dslPositions.size > 0) {
+            dslPositions.forEach((pos, id) => {
+              const obj = objects.get(id);
+              if (!obj) return;
+              obj.x = pos.x;
+              obj.y = pos.y;
+              if (obj.data) {
+                obj.data.x = pos.x;
+                obj.data.y = pos.y;
+              }
+              const el = document.getElementById('obj_' + id);
+              if (el) el.setAttribute('transform', `translate(${pos.x}, ${pos.y})`);
+            });
+          }
+          updateEdges();
+          updateGroups();
+          this.fitView();
+        },
+        // 🌟 全体表示 (Fit - 完全堅牢化)
+        fitView: function() {
+          if (objects.size === 0) {
+            vb = { x: 0, y: 0, w: window.innerWidth || 1080, h: window.innerHeight || 720 };
+            updateViewBox();
+            logBar.innerText = '[表示] オブジェクトが存在しないため初期表示にリセットしました';
+            return;
+          }
+          let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+          let validCount = 0;
+
+          objects.forEach(o => {
+            const ox = safeNum(o.x, 0);
+            const oy = safeNum(o.y, 0);
+            const ow = Math.max(20, safeNum(o.w, 180));
+            const oh = Math.max(20, safeNum(o.h, 80));
+
+            minX = Math.min(minX, ox);
+            minY = Math.min(minY, oy);
+            maxX = Math.max(maxX, ox + ow);
+            maxY = Math.max(maxY, oy + oh);
+            validCount++;
+          });
+
+          if (validCount === 0 || !isFinite(minX) || !isFinite(maxX) || minX >= maxX) {
+            vb = { x: 0, y: 0, w: window.innerWidth || 1080, h: window.innerHeight || 720 };
+            updateViewBox();
+            return;
+          }
+
+          const margin = 80;
+          vb.x = minX - margin;
+          vb.y = minY - margin;
+          vb.w = Math.max(400, (maxX - minX) + margin * 2);
+          vb.h = Math.max(300, (maxY - minY) + margin * 2);
+          updateViewBox();
+          logBar.innerText = '[表示] キャンバス全体を画面に収めました (Fit)';
+        },
+        buildExportDsl: function() {
+          const dslLines = ["clear"];
+          const nodeEdgePairs = new Set();
+          objects.forEach(o => {
+            const d = o.data || {};
+            const props = [];
+            const skipCoords = o.type === 'group' && d.contains;
+            if (!skipCoords) {
+              props.push(`x=${Math.round(o.x)}`);
+              props.push(`y=${Math.round(o.y)}`);
+            }
+            for (const [k, v] of Object.entries(d)) {
+              if (k === 'id' || k === 'x' || k === 'y' || (k === 'w' && d.contains) || (k === 'h' && d.contains)) continue;
+              props.push(`${k}="${String(v).replace(/"/g, '\\"')}"`);
+            }
+            dslLines.push(`${o.type}: ${o.id} [${props.join(', ')}]`);
+            if (d.to) nodeEdgePairs.add(`${d.to}|${o.id}`);
+          });
+          edges.forEach((e, idx) => {
+            const pairKey = `${e.u}|${e.v}`;
+            const st = e.style || {};
+            const hasCustomStyle = st.stroke || st.width != null || st.dash || st.arrow === false;
+            if (!hasCustomStyle && nodeEdgePairs.has(pairKey)) return;
+            const eprops = [`from="${e.u}"`, `to="${e.v}"`];
+            if (e.label) eprops.push(`label="${String(e.label).replace(/"/g, '\\"')}"`);
+            if (st.stroke) eprops.push(`color="${st.stroke}"`);
+            if (st.width != null) eprops.push(`width=${st.width}`);
+            if (st.dash) eprops.push(`dash="${st.dash}"`);
+            if (st.arrow === false) eprops.push('arrow=false');
+            dslLines.push(`edge: e${idx} [${eprops.join(', ')}]`);
+          });
+          return dslLines.join('\n');
+        },
+        exportHTML: function() {
+          const dsl = this.buildExportDsl();
+          assembleExportHtml(dsl)
+            .then((htmlContent) => {
+              const api = (window.pywebview && window.pywebview.api) ? window.pywebview.api : null;
+              const fn = api ? (api.export_html || api.exportHtml) : null;
+              if (fn) {
+                fn.call(api, htmlContent)
+                  .then(res => { logBar.innerText = `[保存成功 💾] ${res}`; })
+                  .catch(err => { logBar.innerText = `[保存エラー ⚠️] ${err}`; });
+              } else if (api && api.sync_canvas_state) {
+                api.sync_canvas_state("__EXPORT_HTML__", "system", 0, 0, { raw_html: htmlContent })
+                  .then(() => { logBar.innerText = '[保存成功 💾] ダウンロードフォルダへ保存しました！'; })
+                  .catch(err => { logBar.innerText = `[保存エラー ⚠️] ${err}`; });
+              } else {
+                const blob = new Blob([htmlContent], { type: 'text/html;charset=utf-8' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `ai_canvas_snapshot_${new Date().toISOString().slice(0, 10)}.html`;
+                a.click();
+                URL.revokeObjectURL(url);
+                logBar.innerText = '[エクスポート] 自己完結した単体HTMLを保存しました！';
+              }
+            })
+            .catch((err) => {
+              console.error('[exportHTML]', err);
+              logBar.innerText = `[保存エラー ⚠️] ${err}`;
+            });
+        },
+        syncToPython: function() {
+          if (window.pywebview && window.pywebview.api && window.pywebview.api.sync_canvas_state) {
+            window.pywebview.api.sync_canvas_state(null, null, 0, 0, this.getFullState());
+          }
+        },
+        setLog: function(msg) {
+          logBar.innerText = msg;
+        },
+        initZoomPan: function() {
+          initZoomPan();
+        },
+        toggleTheme: function() {
+          const body = document.body;
+          const isNatural = body.classList.toggle('theme-natural');
+          if (isNatural) {
+            body.classList.remove('theme-cool');
+          } else {
+            body.classList.add('theme-cool');
+          }
+          const btn = document.getElementById('theme-btn');
+          if (btn) {
+            btn.textContent = isNatural ? '🌙' : '☀';
+            btn.title = isNatural ? 'Cool Cyber へ' : 'Natural & White へ';
+          }
+          logBar.innerText = `[スタイル変更] ${isNatural ? 'Natural & White（温かみノート風）' : 'Cool Cyber（ダークサイバー風）'}へ切り替えました！`;
+        },
+        toggleHeaderMenu: function(forceClose) {
+          const menu = document.getElementById('header-menu');
+          if (!menu) return;
+          if (forceClose === true) {
+            menu.classList.add('hidden');
+            return;
+          }
+          menu.classList.toggle('hidden');
+        },
+        selectNode: function(id, opts) {
+          selectNode(id, opts);
+        },
+        closeDetailPanel: function() {
+          closeDetailPanel();
+        },
+        toggleHelp: function(forceClose) {
+          const el = document.getElementById('help-overlay');
+          if (!el) return;
+          if (forceClose === false) {
+            el.classList.remove('open');
+            return;
+          }
+          el.classList.toggle('open');
+        }
+      };
+    })();
+
+    // =========================================================================
+    // 🧩 2. プラグイン・コンポーネント群 (自由に着脱可能な独立モジュール)
+    // =========================================================================
+
+    // --- ① Card (思考ノード・付箋) ---
+    Canvas.registerComponent('card', {
+      getDimensions: (data) => ({ w: Math.max(80, safeNum(data.w, 200)), h: Math.max(50, safeNum(data.h, 84)) }),
+      render: (data, container, dims) => {
+        const color = data.color || '#38bdf8';
+        const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+        g.innerHTML = `
+          <rect width="${dims.w}" height="${dims.h}" rx="10" fill="var(--card-bg)" stroke="${color}" stroke-width="1.6" />
+          <rect width="${dims.w}" height="5" rx="2" fill="${color}" />
+          <text x="14" y="24" font-size="10" font-weight="700" fill="${color}" letter-spacing="0.05em">${(data.tag || data.id).toUpperCase()}</text>
+          <text x="14" y="46" font-size="13" font-weight="700" fill="var(--card-text)">${data.title || data.id}</text>
+          ${data.sub ? `<text x="14" y="66" font-size="11" fill="var(--card-sub)">${data.sub}</text>` : ''}
+        `;
+        container.appendChild(g);
+      }
+    });
+
+    // --- ② Text (解説文章・段落) ---
+    Canvas.registerComponent('text', {
+      getDimensions: (data) => ({ w: Math.max(80, safeNum(data.w, 250)), h: Math.max(50, safeNum(data.h, 100)) }),
+      render: (data, container, dims) => {
+        const fo = document.createElementNS('http://www.w3.org/2000/svg', 'foreignObject');
+        fo.setAttribute('width', dims.w);
+        fo.setAttribute('height', dims.h);
+        fo.innerHTML = `
+          <div xmlns="http://www.w3.org/1999/xhtml" style="width:100%; height:100%; background:var(--text-node-bg); border:1px dashed var(--text-node-border); border-radius:8px; padding:10px 12px; box-sizing:border-box; color:var(--text-node-body); font-size:12px; line-height:1.5;">
+            ${data.title ? `<div style="font-weight:700; color:var(--text-node-title); font-size:13px; margin-bottom:4px;">${data.title}</div>` : ''}
+            <div>${data.content || ''}</div>
+          </div>
+        `;
+        container.appendChild(fo);
+      }
+    });
+
+    // --- ③ Math (KaTeX 数式ブロック) ---
+    Canvas.registerComponent('math', {
+      getDimensions: (data) => ({ w: Math.max(120, safeNum(data.w, 230)), h: Math.max(60, safeNum(data.h, 92)) }),
+      render: (data, container, dims) => {
+        const fo = document.createElementNS('http://www.w3.org/2000/svg', 'foreignObject');
+        fo.setAttribute('width', dims.w);
+        fo.setAttribute('height', dims.h);
+        const div = document.createElement('div');
+        div.style.cssText = "width:100%; height:100%; background:var(--math-bg); border:1.6px solid var(--math-border); border-radius:10px; display:flex; flex-direction:column; justify-content:space-between; align-items:center; box-sizing:border-box; padding:8px 12px 10px 12px; box-shadow:0 6px 16px rgba(0,0,0,0.25);";
+
+        const label = document.createElement('div');
+        label.style.cssText = "font-size:10px; font-weight:700; color:var(--math-label); letter-spacing:0.06em; text-transform:uppercase;";
+        label.innerText = data.title || data.label || 'FORMULA';
+        div.appendChild(label);
+
+        const mathEl = document.createElement('div');
+        mathEl.style.cssText = "color:var(--math-text); font-size:17px; margin:auto 0;";
+        const cleanLatex = normalizeLatexForKatex(data.latex || '');
+        if (cleanLatex) {
+          renderKatexInto(mathEl, cleanLatex, true);
+        }
+
+        div.appendChild(mathEl);
+        fo.appendChild(div);
+        container.appendChild(fo);
+      }
+    });
+
+    // --- ④ SVG (幾何図形・イラスト) ---
+    Canvas.registerComponent('svg', {
+      getDimensions: (data) => ({ w: Math.max(80, safeNum(data.w, 150)), h: Math.max(80, safeNum(data.h, 150)) }),
+      render: (data, container, dims) => {
+        const cx = dims.w / 2, cy = dims.h / 2;
+        const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+        g.innerHTML = `
+          <rect width="${dims.w}" height="${dims.h}" rx="12" fill="rgba(15,23,42,0.7)" stroke="#f59e0b" stroke-width="1.4" stroke-dasharray="4,3" />
+          <text x="10" y="18" font-size="10" font-weight="700" fill="#f59e0b">${(data.title || 'SVG VIZ').toUpperCase()}</text>
+          <g transform="translate(${cx}, ${cy})">
+            ${data.svg_content || ''}
+          </g>
+        `;
+        container.appendChild(g);
+      }
+    });
+
+    // --- ⑤ Sticky (思考の付箋メモ) ---
+    Canvas.registerComponent('sticky', {
+      getDimensions: (data) => ({ w: Math.max(140, safeNum(data.w, 180)), h: Math.max(90, safeNum(data.h, 120)) }),
+      render: (data, container, dims) => {
+        const fo = document.createElementNS('http://www.w3.org/2000/svg', 'foreignObject');
+        fo.setAttribute('width', dims.w);
+        fo.setAttribute('height', dims.h);
+        const bg = data.color || '#fef08a';
+        fo.innerHTML = `
+          <div xmlns="http://www.w3.org/1999/xhtml" style="width:100%; height:100%; background:${bg}; border-radius:4px; padding:10px 12px; box-sizing:border-box; color:#1e293b; box-shadow:0 4px 12px rgba(0,0,0,0.35); display:flex; flex-direction:column; justify-content:space-between; transform:rotate(-0.8deg); border-top:3px solid rgba(0,0,0,0.12);">
+            <div>
+              <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:4px;">
+                <span style="font-weight:800; font-size:12px; color:#0f172a; letter-spacing:0.02em;">${data.title || 'NOTE'}</span>
+                <span style="width:7px; height:7px; border-radius:50%; background:rgba(0,0,0,0.3); display:inline-block;"></span>
+              </div>
+              <div style="font-size:11px; line-height:1.45; color:#334155; word-break:break-word;">${data.content || data.text || ''}</div>
+            </div>
+            ${data.author ? `<div style="font-size:9px; font-weight:700; color:rgba(0,0,0,0.4); text-align:right;">— ${data.author}</div>` : ''}
+          </div>
+        `;
+        container.appendChild(fo);
+      }
+    });
+
+    // --- ⑥ Group (領域・クラスタ枠) ---
+    Canvas.registerComponent('group', {
+      getDimensions: (data) => ({
+        w: Math.max(160, safeNum(data.w, 380)),
+        h: Math.max(100, safeNum(data.h, 240))
+      }),
+      render: (data, container, dims) => {
+        const accent = data.color || '#38bdf8';
+        const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+        const titleText = data.title || 'GROUP';
+        const badgeW = Math.max(60, titleText.length * 10 + 20);
+
+        g.innerHTML = `
+          <g transform="translate(12, 12)">
+            <rect width="${badgeW}" height="20" rx="5" fill="${accent}" opacity="0.22" />
+            <rect width="${badgeW}" height="20" rx="5" fill="none" stroke="${accent}" stroke-width="1" opacity="0.55" />
+            <text x="8" y="14" font-size="10" font-weight="700" fill="${accent}" letter-spacing="0.04em">${titleText.toUpperCase()}</text>
+          </g>
+          ${data.sub ? `<text x="14" y="${dims.h - 12}" font-size="10" fill="#64748b" font-weight="500">${data.sub}</text>` : ''}
+        `;
+        container.appendChild(g);
+      }
+    });
+
+    // --- ⑦ Table (対比・マトリクス表) ---
+    Canvas.registerComponent('table', {
+      getDimensions: (data) => {
+        const spec = CanvasTable.parseNodeFields(data.headers || data.cols, data.rows);
+        const est = CanvasTable.estimateSize(spec);
+        return {
+          w: Math.max(180, safeNum(data.w, est.w)),
+          h: Math.max(80, safeNum(data.h, est.h))
+        };
+      },
+      render: (data, container, dims) => {
+        const accent = data.color || '#38bdf8';
+        const fo = document.createElementNS('http://www.w3.org/2000/svg', 'foreignObject');
+        fo.setAttribute('width', dims.w);
+        fo.setAttribute('height', dims.h);
+
+        const wrap = document.createElement('div');
+        wrap.setAttribute('xmlns', 'http://www.w3.org/1999/xhtml');
+        wrap.style.cssText =
+          'width:100%; height:100%; background:var(--table-bg); border:1.6px solid ' + accent +
+          '; border-radius:10px; padding:8px 10px; box-sizing:border-box; color:var(--card-text); display:flex; flex-direction:column; overflow:hidden;';
+
+        if (data.title) {
+          const titleEl = document.createElement('div');
+          titleEl.style.cssText =
+            'font-size:11px; font-weight:800; color:' + accent +
+            '; letter-spacing:0.04em; margin-bottom:6px;';
+          titleEl.textContent = String(data.title).toUpperCase();
+          wrap.appendChild(titleEl);
+        }
+
+        const scroll = document.createElement('div');
+        scroll.style.cssText = 'flex:1; overflow:auto;';
+        CanvasTable.appendTable(scroll, CanvasTable.parseNodeFields(data.headers || data.cols, data.rows), {
+          firstColEmphasis: true
+        });
+        wrap.appendChild(scroll);
+        fo.appendChild(wrap);
+        container.appendChild(fo);
+      }
+    });
+
+    // pywebview / inbox 監視からの安全な DSL 投入（JSON エスケープ済み文字列）
+    window.__applyCanvasDslFromHost = function (dsl) {
+      if (typeof dsl !== 'string' || !dsl.trim()) return;
+      Canvas.applyDSL(dsl);
+    };
+
+    let canvasZoomInited = false;
+    let canvasBootstrapDone = false;
+
+    async function bootstrapCanvas() {
+      if (!canvasZoomInited) {
+        Canvas.initZoomPan();
+        canvasZoomInited = true;
+      }
+      if (canvasBootstrapDone) {
+        return;
+      }
+
+      const embeddedDsl = readEmbeddedDsl();
+      if (embeddedDsl.trim()) {
+        canvasBootstrapDone = true;
+        Canvas.applyDSL(embeddedDsl);
+        Canvas.setLog('単体スナップショットを正常に復元しました！');
+        return;
+      }
+
+      const api = window.pywebview && window.pywebview.api;
+      if (!api || typeof api.get_startup_content !== 'function') {
+        return;
+      }
+
+      try {
+        const pack = await api.get_startup_content();
+        if (pack && pack.mode === 'state' && Canvas.loadFromState(pack.payload)) {
+          canvasBootstrapDone = true;
+          const n = pack.payload.objects.length;
+          Canvas.setLog(`[復元] canvas_state.json から ${n} ノードを表示しました`);
+          return;
+        }
+        if (pack && pack.mode === 'dsl' && pack.payload) {
+          canvasBootstrapDone = true;
+          Canvas.applyDSL(pack.payload);
+          const src = pack.source === 'demo' ? 'quantum_demo' : 'inbox_dsl';
+          Canvas.setLog(`[読込] ${src} からグラフを描画しました`);
+          return;
+        }
+        if (pack && pack.mode === 'empty') {
+          canvasBootstrapDone = true;
+          Canvas.setLog('キャンバス準備完了。AIの思考投影を待機中...');
+        }
+      } catch (err) {
+        console.error('[bootstrapCanvas]', err);
+      }
+    }
+
+    function scheduleBootstrap() {
+      bootstrapCanvas();
+      let tries = 0;
+      const timer = setInterval(() => {
+        if (canvasBootstrapDone) {
+          clearInterval(timer);
+          return;
+        }
+        tries += 1;
+        bootstrapCanvas();
+        if (tries >= 50) {
+          clearInterval(timer);
+          if (!canvasBootstrapDone) {
+            canvasBootstrapDone = true;
+            Canvas.setLog('キャンバス準備完了。AIの思考投影を待機中...');
+          }
+        }
+      }, 100);
+    }
+
+    // 起動時初期化（pywebview API 準備後に state / inbox から自動復元）
+    window.addEventListener('DOMContentLoaded', scheduleBootstrap);
+    window.addEventListener('pywebviewready', scheduleBootstrap);
+  </script>
+</body>
+</html>

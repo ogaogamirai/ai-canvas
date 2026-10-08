@@ -1,0 +1,11 @@
+__pycache__/
+*.pyc
+.pytest_cache/
+_check_script_*.js
+_inbox_apply.js
+_size_check*.html
+_verify_export.html
+ai_canvas_snapshot_*.html
+canvas_state.json
+inbox_dsl.txt
+index_v*_backup.html

@@ -1,0 +1,3 @@
+clear
+card: demo_table [title="詳細パネル — Markdown 表サンプル", sub="detail= 内の |表| を確認", color="#38bdf8", detail="# マークダウン表の表示テスト\n\n## 比較表（GFM パイプ形式）\n\n| 項目 | 波動的な現れ | 粒子的な現れ |\n|------|--------------|--------------|\n| 光 | ヤングの干渉・回折 | 光電効果 ($E=h\\nu$) |\n| 電子 | 電子線回折 | 衝突・電荷 |\n\n## リストとの併用\n\n- **太字** と `code` もセル内で使えます\n- 下はインライン数式: $\\lambda = h/p$\n\n表の上に見出し、下に箇条書きが続く典型レイアウトです。"]
+math: demo_eq [title="関連式", latex="E = h\\nu", to="demo_table", link="参照", edge_color="#10b981", edge_width=2]

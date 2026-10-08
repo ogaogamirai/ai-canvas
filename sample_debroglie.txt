@@ -1,0 +1,4 @@
+clear
+card: debroglie_card [title="物質波の提唱", sub="ド・ブロイ (1924)", color="#38bdf8"]
+math: debroglie_eq [label="DE BROGLIE", latex="\lambda = \frac{h}{p}", to="debroglie_card", label="波長と運動量"]
+text: matter_wave [title="二重性の拡張", content="光が粒子のように振る舞うなら、電子などの物質粒子もまた波としての性質を持つはずだ。", to="debroglie_eq", label="理論的帰結"]
