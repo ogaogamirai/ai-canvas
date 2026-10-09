@@ -55,9 +55,16 @@ python -X utf8 -m unittest discover -q
 - 常駐 HTTP / WebSocket  
 - Phase 2 相当の複雑エッジ描画（二重線・直交ルーティング等はロールバック済み）  
 - export 用 gzip（添付は minify `.html` で十分と判断）  
-- GitHub 正本（台帳: 閉じ役はタスク明示・Nova 相談可）  
 
 将来案は [BRUSHUP_ROADMAP.md](BRUSHUP_ROADMAP.md)。
+
+---
+
+## GitHub 正本（確定 2026-10-09）
+
+- **リポジトリ**: [ogaogamirai/ai-canvas](https://github.com/ogaogamirai/ai-canvas)（public・**共有の正本**）
+- **閉じ役**: Nova（[`GITHUB_CLOSER_ROLES_v01.md`](../../GITHUB_CLOSER_ROLES_v01.md) v01.7）
+- ローカル `G:\マイドライブ\Tools\ai-canvas` で編集 → `commit` → `push origin master` で確定。push されるまで他 AP は正本とみなさない。
 
 ---
 

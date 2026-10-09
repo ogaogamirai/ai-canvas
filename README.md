@@ -188,4 +188,4 @@ edge: e1 [from="origin", to="einstein", label="定式化", color="#10b981", widt
 | 回帰テスト | `python -X utf8 -m unittest discover -q` |
 | 単体 HTML 配布 | GUI export または `canvas_cli.py export` |
 
-**Git**: 本フォルダで `git init` 済みの場合、変更はコミットして共有（閉じ役は台帳に従う）。
+**Git**: ローカル正本は本フォルダ。**共有の正本**は [ogaogamirai/ai-canvas](https://github.com/ogaogamirai/ai-canvas)（public）。`index.html` 等を直したら `canvas_cli.py build-export` → `git commit` → `git push origin master`。**閉じ役: Nova**（[`GITHUB_CLOSER_ROLES_v01.md`](../GITHUB_CLOSER_ROLES_v01.md)）。
