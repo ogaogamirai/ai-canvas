@@ -132,6 +132,12 @@ python -X utf8 canvas_cli.py state          # 現在の配置・接続の概要
 python -X utf8 canvas_cli.py state --json   # 生の canvas_state.json を出力（構造化JSON）
 python -X utf8 canvas_cli.py check draft.dsl            # DSL検証（行番号付き error/warning）
 python -X utf8 canvas_cli.py normalize draft.dsl --rich # 整形（色hex小文字化・重複edge除去・空行整理）
+python -X utf8 canvas_cli.py dsl [-o out.dsl]           # state → DSL 再生成（往復・コメントは落ちる）
+python -X utf8 canvas_cli.py diff a.dsl b.dsl           # 構造差分（'-' は現在の state）
+python -X utf8 canvas_cli.py apply patch.dsl            # 現在の state に増分適用（--dry-run 可・全置換しない）
+python -X utf8 canvas_cli.py neighbors &lt;id&gt;           # 隣接（in/out）
+python -X utf8 canvas_cli.py path &lt;a&gt; &lt;b&gt;               # 最短経路（--undirected 可）
+python -X utf8 canvas_cli.py tree                       # 有向木（roots から）
 python -X utf8 canvas_cli.py clear    # キャンバス全消去
 python -X utf8 canvas_cli.py reload   # 画面リロード指示
 python -X utf8 canvas_cli.py export        # 単体 HTML（minify シェル + inbox/demo の DSL）

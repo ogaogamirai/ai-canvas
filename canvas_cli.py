@@ -226,6 +226,105 @@ def cmd_check(args):
         sys.exit(1)
 
 
+def _load_dsl(arg: str) -> str:
+    """DSL文字列 / DSLファイル / state JSON / '-'（現在の state）を DSL テキストにする。"""
+    from canvas_ops import dsl_from_state
+
+    if arg == "-":
+        with open(STATE_FILE, encoding="utf-8") as f:
+            return dsl_from_state(json.load(f))
+    if os.path.exists(arg):
+        with open(arg, encoding="utf-8") as f:
+            raw = f.read()
+        if arg.lower().endswith(".json"):
+            return dsl_from_state(json.loads(raw))
+        return raw
+    return arg
+
+
+def cmd_dsl(args):
+    """canvas_state.json（構造化JSON）から DSL を再生成（往復）。"""
+    from canvas_ops import dsl_from_state
+
+    path = args.from_path or STATE_FILE
+    if not os.path.exists(path):
+        print(f"[-] state が見つかりません: {path}")
+        return
+    with open(path, encoding="utf-8") as f:
+        out = dsl_from_state(json.load(f))
+    if args.output:
+        with open(args.output, "w", encoding="utf-8") as f:
+            f.write(out + "\n")
+        print(f"[+] DSL を書き出しました ➔ {args.output}")
+    else:
+        print(out)
+
+
+def cmd_diff(args):
+    """2つの DSL / state の構造差分。"""
+    from canvas_ops import diff_dsl
+
+    changes = diff_dsl(_load_dsl(args.a), _load_dsl(args.b))
+    if not changes:
+        print("[=] 差分なし")
+        return
+    for kind, op, ref, detail in changes:
+        extra = f" ({detail})" if detail else ""
+        print(f"  {op} {kind}: {ref}{extra}")
+    print(f"[diff] {len(changes)} 件の変更")
+
+
+def cmd_apply(args):
+    """現在の state に patch DSL を増分適用（全置換しない）。"""
+    from canvas_ops import dsl_from_state, merge_dsl
+
+    if not os.path.exists(STATE_FILE):
+        print("[-] canvas_state.json がありません（ベースにできません）")
+        return
+    with open(STATE_FILE, encoding="utf-8") as f:
+        base = dsl_from_state(json.load(f))
+    patch_text, _ = _read_text_arg(args.patch)
+    merged = merge_dsl(base, patch_text)
+    if args.dry_run:
+        print(merged)
+        return
+    with open(INBOX_DSL, "w", encoding="utf-8") as f:
+        f.write(merged.strip())
+    print("[+] マージ結果を inbox_dsl.txt へ書き込みました（開いているキャンバスが更新されます）")
+
+
+def cmd_neighbors(args):
+    """ノードの隣接（入力/出力）。"""
+    from canvas_ops import neighbors, parse_dsl
+
+    struct = parse_dsl(_load_dsl(args.from_path or "-"))
+    if args.id not in struct["nodes"]:
+        print(f"[-] ノード '{args.id}' は見つかりません")
+        return
+    nb = neighbors(struct, args.id)
+    print(f"=== {args.id} の隣接 ===")
+    print(f"  入力 (in):  {', '.join(nb['incoming']) or 'なし'}")
+    print(f"  出力 (out): {', '.join(nb['outgoing']) or 'なし'}")
+
+
+def cmd_path(args):
+    """2ノード間の最短経路。"""
+    from canvas_ops import find_path, parse_dsl
+
+    struct = parse_dsl(_load_dsl(args.from_path or "-"))
+    p = find_path(struct, args.src, args.dst, undirected=args.undirected)
+    print(" -> ".join(p) if p else f"[-] 経路なし: {args.src} -> {args.dst}")
+
+
+def cmd_tree(args):
+    """有向木（roots から）を表示。"""
+    from canvas_ops import parse_dsl, tree_lines
+
+    struct = parse_dsl(_load_dsl(args.from_path or "-"))
+    for line in tree_lines(struct):
+        print(line)
+
+
 def main():
     parser = argparse.ArgumentParser(description="AI-Canvas CLI Controller")
     subparsers = parser.add_subparsers(dest="command")
@@ -238,6 +337,33 @@ def main():
     # check
     p_check = subparsers.add_parser("check", help="DSL を検証（行番号付き error/warning）")
     p_check.add_argument("input", help="DSL文字列 または .dsl/.txt ファイルパス")
+
+    # dsl (D1): state → DSL 再生成
+    p_dsl = subparsers.add_parser("dsl", help="canvas_state.json から DSL を再生成（往復）")
+    p_dsl.add_argument("--from", dest="from_path", default=None, help="state JSON パス（既定: canvas_state.json）")
+    p_dsl.add_argument("-o", "--output", default=None, help="出力ファイル（未指定は標準出力）")
+
+    # diff (D2)
+    p_diff = subparsers.add_parser("diff", help="2つの DSL / state の構造差分")
+    p_diff.add_argument("a", help="DSL/state パス、または '-'（現在の state）")
+    p_diff.add_argument("b")
+
+    # apply (D3)
+    p_apply = subparsers.add_parser("apply", help="現在の state に patch DSL を増分適用")
+    p_apply.add_argument("patch", help="patch DSL ファイル または 文字列")
+    p_apply.add_argument("--dry-run", action="store_true", help="inbox へ書かず結果を表示")
+
+    # query (D4)
+    p_nb = subparsers.add_parser("neighbors", help="ノードの隣接（in/out）")
+    p_nb.add_argument("id")
+    p_nb.add_argument("--from", dest="from_path", default=None)
+    p_path = subparsers.add_parser("path", help="2ノード間の最短経路")
+    p_path.add_argument("src")
+    p_path.add_argument("dst")
+    p_path.add_argument("--undirected", action="store_true")
+    p_path.add_argument("--from", dest="from_path", default=None)
+    p_tree = subparsers.add_parser("tree", help="有向木を表示")
+    p_tree.add_argument("--from", dest="from_path", default=None)
 
     # show
     p_show = subparsers.add_parser("show", help="DSLテキストまたはファイルをキャンバスへ投入")
@@ -299,6 +425,18 @@ def main():
         cmd_types(args)
     elif args.command == "check":
         cmd_check(args)
+    elif args.command == "dsl":
+        cmd_dsl(args)
+    elif args.command == "diff":
+        cmd_diff(args)
+    elif args.command == "apply":
+        cmd_apply(args)
+    elif args.command == "neighbors":
+        cmd_neighbors(args)
+    elif args.command == "path":
+        cmd_path(args)
+    elif args.command == "tree":
+        cmd_tree(args)
     elif args.command == "show":
         cmd_show(args)
     elif args.command == "normalize":
