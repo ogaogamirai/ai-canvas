@@ -26,7 +26,9 @@ function extractFn(src, name) {
   return src.slice(i, end);
 }
 
+const qp = js.match(/const QUOTED_PROP_SRC = `[^`]*`;/);
 const code =
+  (qp ? qp[0] : '') + '\n' +
   extractFn(js, 'setQuotedProp') + '\n' +
   extractFn(js, 'setLineProp') + '\n' +
   'return { setQuotedProp, setLineProp };';

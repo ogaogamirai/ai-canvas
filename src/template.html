@@ -73,8 +73,9 @@
             <span class="badge badge-ipc" title="WebView2 IPC・ポートゼロ">IPC</span>
           </div>
           <div class="toolbar-primary">
-            <button type="button" class="btn-icon" title="水平整列 (LR)" aria-label="水平整列" onclick="Canvas.autoLayout('LR')">↔</button>
-            <button type="button" class="btn-icon" title="垂直整列 (TB)" aria-label="垂直整列" onclick="Canvas.autoLayout('TB')">↕</button>
+            <button type="button" class="btn-icon layout-dir-btn active" data-dir="LR" title="横に整列 (→)" aria-label="横に整列" onclick="Canvas.autoLayout('LR')">→</button>
+            <button type="button" class="btn-icon layout-dir-btn" data-dir="BT" title="縦・下から上へ (↑)" aria-label="縦に整列（上向き）" onclick="Canvas.autoLayout('BT')">↑</button>
+            <button type="button" class="btn-icon layout-dir-btn" data-dir="TB" title="縦・上から下へ (↓)" aria-label="縦に整列（下向き）" onclick="Canvas.autoLayout('TB')">↓</button>
             <button type="button" class="btn-icon" title="全体表示 (Fit)" aria-label="全体表示" onclick="Canvas.fitView()">⊡</button>
             <button type="button" class="btn-icon" id="theme-btn" title="テーマ切替" aria-label="テーマ切替" onclick="Canvas.toggleTheme()">☀</button>
             <div class="menu-wrap">
@@ -82,6 +83,7 @@
               <div id="header-menu" class="header-menu hidden">
                 <button type="button" class="menu-item" onclick="Canvas.clear(); Canvas.toggleHeaderMenu(true)">🧹 リセット</button>
                 <button type="button" class="menu-item" onclick="Canvas.exportHTML(); Canvas.toggleHeaderMenu(true)">💾 単体HTML保存</button>
+                <button type="button" class="menu-item" id="menu-detail-only" onclick="Canvas.toggleDetailOnly()">📄 詳細: 常に開く</button>
               </div>
             </div>
           </div>
@@ -98,7 +100,12 @@
             <span id="panel-type-badge" class="panel-badge">CARD</span>
             <span id="panel-node-id" style="font-size:12px; font-family:monospace; color:var(--log-color);">#id</span>
           </div>
-          <button class="panel-close-btn" onclick="Canvas.closeDetailPanel()" title="閉じる (Esc)">✕</button>
+          <div style="display:flex; align-items:center; gap:2px;">
+            <!-- @editor-only:start -->
+            <button class="panel-close-btn" id="panel-edit-btn" onclick="EditorApp.toggleDetailEdit()" title="detail を編集">✏️</button>
+            <!-- @editor-only:end -->
+            <button class="panel-close-btn" onclick="Canvas.closeDetailPanel()" title="閉じる (Esc)">✕</button>
+          </div>
         </div>
         <div id="panel-body" class="panel-content"></div>
         <div class="panel-footer">

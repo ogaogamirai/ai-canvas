@@ -75,18 +75,30 @@
       return frag;
     }
 
+    // detail など長文 Markdown を DSL 値へ安全にエンコードする（unescapeDetailMarkdown と対称）。
+    // 二重引用符のみ \" へ（書き手 buildExportDsl / normalizeDslText と一致）、改行は \n 表記。
+    // バックスラッシュは保持する（LaTeX を壊さない）。
+    function escapeDetailMarkdown(markdown) {
+      if (markdown == null) return '';
+      return String(markdown)
+        .replace(/"/g, '\\"')
+        .replace(/\r\n?/g, '\n')
+        .replace(/\n/g, '\\n');
+    }
+
     // DSL 行のプロパティ（[ ] の中身）に key="value" を設定/除去する（value 空で除去）。
-    // node / edge / group の色・属性編集で共用（重複排除）。
+    // node / edge / group の色・属性編集で共用（重複排除）。\" エスケープ済みの値にも対応。
+    const QUOTED_PROP_SRC = `(?:"(?:\\\\.|[^"\\\\])*"|'[^']*'|[^\\s,\\]]+)`;
     function setQuotedProp(props, key, value, quote) {
-      const re = new RegExp(`${key}=(?:"[^"]*"|'[^']*'|[^\\s,\\]]+)`);
+      const re = new RegExp(`${key}=${QUOTED_PROP_SRC}`);
       if (value !== '' && value != null) {
         const token = quote === false ? `${key}=${value}` : `${key}="${value}"`;
-        if (re.test(props)) return props.replace(re, token);
+        if (re.test(props)) return props.replace(re, () => token);
         return props.trim() ? `${props}, ${token}` : token;
       }
       if (re.test(props)) {
         return props
-          .replace(new RegExp(`,?\\s*${key}=(?:"[^"]*"|'[^']*'|[^\\s,\\]]+)`), '')
+          .replace(new RegExp(`,?\\s*${key}=${QUOTED_PROP_SRC}`), '')
           .replace(/^,\s*/, '');
       }
       return props;
@@ -125,6 +137,7 @@
         { id: 'math', icon: '🔢', name: 'Math (数式ブロック)', key: '/math', template: 'math: m${id} [title="数式名", latex="E = mc^2"]' },
         { id: 'table', icon: '📊', name: 'Table (比較表)', key: '/table', template: 'table: t${id} [title="比較表", headers="項目A, 項目B", rows="値1|値2; 値3|値4"]' },
         { id: 'text', icon: '📝', name: 'Text (解説ブロック)', key: '/text', template: 'text: tx${id} [title="解説", content="ここに説明文"]' },
+        { id: 'sticky', icon: '🗒️', name: 'Sticky (付箋メモ)', key: '/sticky', template: 'sticky: s${id} [title="メモ", content="付箋の内容", color="#fef08a"]' },
         { id: 'group', icon: '🔲', name: 'Group (領域・クラスタ枠)', key: '/group', template: 'group: g${id} [title="グループ名", contains="origin,einstein", color="#38bdf8"]' },
         { id: 'connect', icon: '🔗', name: 'Connect (ノード接続)', key: '/connect', isConnect: true },
         // 思考テンプレート (Phase 5)
@@ -383,6 +396,8 @@
 
       showSlashMenu: function() {
         if (!this.slashMenuEl) return;
+        const wasOpen = this.slashMenuEl.classList.contains('open');
+        const queryChanged = this.slashQuery !== this._lastSlashQuery;
         this.filteredSlashItems = this.slashCommands.filter(item => {
           return item.key.toLowerCase().includes(this.slashQuery) || item.name.toLowerCase().includes(this.slashQuery);
         });
@@ -392,7 +407,12 @@
           return;
         }
 
-        this.slashActiveIdx = 0;
+        // 先頭へ戻すのは「新規表示」か「クエリ変化」のときだけ。
+        // ↑↓ ナビ後の keyup 再表示で選択が 0 に飛ぶ不具合を防ぐ。
+        if (!wasOpen || queryChanged || this.slashActiveIdx >= this.filteredSlashItems.length) {
+          this.slashActiveIdx = 0;
+        }
+        this._lastSlashQuery = this.slashQuery;
         this.renderSlashList();
 
         // 簡易カーソル位置追従
@@ -407,6 +427,7 @@
 
       hideSlashMenu: function() {
         if (this.slashMenuEl) this.slashMenuEl.classList.remove('open');
+        this._lastSlashQuery = null;
       },
 
       renderSlashList: function() {
@@ -425,6 +446,9 @@
             this.executeSlashCommand(item);
           });
           this.slashListEl.appendChild(div);
+          if (idx === this.slashActiveIdx && div.scrollIntoView) {
+            div.scrollIntoView({ block: 'nearest' });
+          }
         });
       },
 
@@ -738,6 +762,114 @@
             this.updateCursorPos();
           } catch (_) {}
         }
+      },
+
+      // 🌟 詳細パネル内 detail エディタ（editor 専用・明示保存）
+      detailEditNodeId: null,
+
+      _getCanvasObject: function(id) {
+        if (typeof Canvas === 'undefined' || typeof Canvas.getFullState !== 'function') return null;
+        const st = Canvas.getFullState();
+        return (st.objects || []).find(o => o.id === id) || null;
+      },
+
+      toggleDetailEdit: function() {
+        // DOM の有無で状態を判定（パネルが閉じても古い状態を残さない）
+        if (document.getElementById('panel-detail-input')) {
+          this.cancelDetailEdit();
+          return;
+        }
+        const id = window.selectedNodeId;
+        if (!id) return;
+        const obj = this._getCanvasObject(id);
+        if (!obj || obj.type === 'group') return;
+        const detail = (obj.data && obj.data.detail) ? unescapeDetailMarkdown(obj.data.detail) : '';
+        this.detailEditNodeId = id;
+        this._renderDetailEditor(detail);
+      },
+
+      _renderDetailEditor: function(detail) {
+        const body = document.getElementById('panel-body');
+        if (!body) return;
+        body.innerHTML = '';
+        const ta = document.createElement('textarea');
+        ta.id = 'panel-detail-input';
+        ta.className = 'panel-detail-input';
+        ta.spellcheck = false;
+        ta.value = detail;
+        ta.placeholder = 'Markdown / KaTeX / SVG を入力（他エディタから貼り付け可）';
+        body.appendChild(ta);
+
+        const row = document.createElement('div');
+        row.className = 'panel-edit-actions';
+        const save = document.createElement('button');
+        save.type = 'button';
+        save.className = 'btn';
+        save.textContent = '💾 保存';
+        save.addEventListener('click', () => this.saveDetailEdit());
+        const cancel = document.createElement('button');
+        cancel.type = 'button';
+        cancel.className = 'btn';
+        cancel.textContent = '✕ キャンセル';
+        cancel.addEventListener('click', () => this.cancelDetailEdit());
+        row.appendChild(save);
+        row.appendChild(cancel);
+        body.appendChild(row);
+
+        const btn = document.getElementById('panel-edit-btn');
+        if (btn) { btn.textContent = '✕'; btn.title = '編集をキャンセル'; }
+        setTimeout(() => { try { ta.focus(); } catch (_) {} }, 30);
+      },
+
+      _exitDetailEdit: function() {
+        this.detailEditNodeId = null;
+        const btn = document.getElementById('panel-edit-btn');
+        if (btn) { btn.textContent = '✏️'; btn.title = 'detail を編集'; }
+      },
+
+      saveDetailEdit: function() {
+        const ta = document.getElementById('panel-detail-input');
+        if (!ta) return;
+        const id = this.detailEditNodeId || window.selectedNodeId;
+        const ok = this.updateNodePropDetail(id, ta.value);
+        this._exitDetailEdit();
+        if (ok && typeof Canvas !== 'undefined' && Canvas.selectNode) {
+          // 保存＝同期でキャンバスが再構築されパネルが閉じるため、再選択して再表示する
+          Canvas.selectNode(id, { openDetail: true });
+          this.setStatus('ready', `[detail 保存 💾] #${id}`);
+        } else if (!ok) {
+          this.setStatus('error', `[detail 保存失敗] #${id} がDSLに見つかりません`);
+        }
+      },
+
+      cancelDetailEdit: function() {
+        const id = this.detailEditNodeId || window.selectedNodeId;
+        this._exitDetailEdit();
+        if (id && typeof Canvas !== 'undefined' && Canvas.selectNode) {
+          Canvas.selectNode(id, { openDetail: true });
+        }
+      },
+
+      // ノード行の detail プロパティを設定/除去して DSL へ書き戻す（明示保存・同期）
+      updateNodePropDetail: function(id, markdown) {
+        if (!this.textareaEl || !id) return false;
+        const lines = this.textareaEl.value.split('\n');
+        let modified = false;
+        for (let i = 0; i < lines.length; i++) {
+          const m = lines[i].trim().match(/^([a-zA-Z0-9_-]+):\s*([a-zA-Z0-9_-]+)\s*\[(.*)\]$/);
+          if (m && m[2] === id) {
+            const escaped = escapeDetailMarkdown(markdown);
+            lines[i] = `${m[1]}: ${m[2]} [${setQuotedProp(m[3], 'detail', escaped)}]`;
+            modified = true;
+            break;
+          }
+        }
+        if (!modified) return false;
+        this.textareaEl.value = lines.join('\n');
+        this.updateLineNumbers();
+        this.updateCursorPos();
+        this.applyToCanvas();
+        return true;
       },
 
       // 🌟 エッジ情報の特定 (独立 edge 行 & ノード行内インライン定義の両方を完全サポート)
@@ -1129,7 +1261,7 @@
             if (!trimmed || trimmed.startsWith('#')) return;
             const parts = trimmed.split(/\s+/);
             const cmd = parts[0].toLowerCase();
-            if (['card', 'math', 'svg', 'table', 'text'].includes(cmd) && parts[1]) {
+            if (['card', 'math', 'svg', 'table', 'text', 'sticky'].includes(cmd) && parts[1]) {
               existingNodes.push({
                 id: parts[1],
                 title: parts[1],
@@ -1439,13 +1571,13 @@ edge: e5 [from="origin", to="tbl_duality", label="対比", color="#a855f7", widt
           }
 
           // ノード行: props をパースして相乗りエッジプロパティを分離
-          const propMatches = Array.from(rawProps.matchAll(/([a-zA-Z0-9_-]+)=(?:"([^"]*)"|'([^']*)'|([^\s,\]]+))/g));
+          const propMatches = Array.from(rawProps.matchAll(/([a-zA-Z0-9_-]+)=(?:"((?:\\.|[^"\\])*)"|'([^']*)'|([^\s,\]]+))/g));
           const cleanProps = [];
           const edgeAttrs = {};
 
           for (const pm of propMatches) {
             const k = pm[1];
-            const v = pm[2] !== undefined ? pm[2] : (pm[3] !== undefined ? pm[3] : pm[4]);
+            const v = pm[2] !== undefined ? pm[2].replace(/\\"/g, '"') : (pm[3] !== undefined ? pm[3] : pm[4]);
             if (k === 'to') {
               edgeAttrs.to = v;
             } else if (k === 'link' || k === 'edge') {

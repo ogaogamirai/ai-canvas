@@ -130,6 +130,7 @@
       cursor: pointer; transition: all 0.2s; display: inline-flex; align-items: center; justify-content: center;
     }
     .btn-icon:hover { background: var(--btn-hover-bg); color: var(--btn-hover-color); border-color: var(--btn-hover-border); }
+    .layout-dir-btn.active { background: var(--brand-color, #38bdf8); color: #0b1220; border-color: var(--brand-color, #38bdf8); font-weight: 700; }
     .menu-wrap { position: relative; }
     .header-menu {
       position: absolute; right: 0; top: calc(100% + 4px); min-width: 168px;

@@ -167,6 +167,8 @@ python -X utf8 canvas_cli.py show "card: c1 [title='仮説']"
 
 ## 4. 簡易DSL構文
 
+> **全型・全プロパティのコンパクト一覧（AI・人間兼用）→ [`docs/DSL.md`](docs/DSL.md)**
+
 ```text
 # 思考カード
 card: <id> [title="タイトル", sub="サブタイトル", color="#38bdf8"]

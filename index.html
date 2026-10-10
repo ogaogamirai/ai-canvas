@@ -139,6 +139,7 @@
       cursor: pointer; transition: all 0.2s; display: inline-flex; align-items: center; justify-content: center;
     }
     .btn-icon:hover { background: var(--btn-hover-bg); color: var(--btn-hover-color); border-color: var(--btn-hover-border); }
+    .layout-dir-btn.active { background: var(--brand-color, #38bdf8); color: #0b1220; border-color: var(--brand-color, #38bdf8); font-weight: 700; }
     .menu-wrap { position: relative; }
     .header-menu {
       position: absolute; right: 0; top: calc(100% + 4px); min-width: 168px;
@@ -325,8 +326,9 @@
             <span class="badge badge-ipc" title="WebView2 IPC・ポートゼロ">IPC</span>
           </div>
           <div class="toolbar-primary">
-            <button type="button" class="btn-icon" title="水平整列 (LR)" aria-label="水平整列" onclick="Canvas.autoLayout('LR')">↔</button>
-            <button type="button" class="btn-icon" title="垂直整列 (TB)" aria-label="垂直整列" onclick="Canvas.autoLayout('TB')">↕</button>
+            <button type="button" class="btn-icon layout-dir-btn active" data-dir="LR" title="横に整列 (→)" aria-label="横に整列" onclick="Canvas.autoLayout('LR')">→</button>
+            <button type="button" class="btn-icon layout-dir-btn" data-dir="BT" title="縦・下から上へ (↑)" aria-label="縦に整列（上向き）" onclick="Canvas.autoLayout('BT')">↑</button>
+            <button type="button" class="btn-icon layout-dir-btn" data-dir="TB" title="縦・上から下へ (↓)" aria-label="縦に整列（下向き）" onclick="Canvas.autoLayout('TB')">↓</button>
             <button type="button" class="btn-icon" title="全体表示 (Fit)" aria-label="全体表示" onclick="Canvas.fitView()">⊡</button>
             <button type="button" class="btn-icon" id="theme-btn" title="テーマ切替" aria-label="テーマ切替" onclick="Canvas.toggleTheme()">☀</button>
             <div class="menu-wrap">
@@ -334,6 +336,7 @@
               <div id="header-menu" class="header-menu hidden">
                 <button type="button" class="menu-item" onclick="Canvas.clear(); Canvas.toggleHeaderMenu(true)">🧹 リセット</button>
                 <button type="button" class="menu-item" onclick="Canvas.exportHTML(); Canvas.toggleHeaderMenu(true)">💾 単体HTML保存</button>
+                <button type="button" class="menu-item" id="menu-detail-only" onclick="Canvas.toggleDetailOnly()">📄 詳細: 常に開く</button>
               </div>
             </div>
           </div>
@@ -350,7 +353,10 @@
             <span id="panel-type-badge" class="panel-badge">CARD</span>
             <span id="panel-node-id" style="font-size:12px; font-family:monospace; color:var(--log-color);">#id</span>
           </div>
-          <button class="panel-close-btn" onclick="Canvas.closeDetailPanel()" title="閉じる (Esc)">✕</button>
+          <div style="display:flex; align-items:center; gap:2px;">
+            
+            <button class="panel-close-btn" onclick="Canvas.closeDetailPanel()" title="閉じる (Esc)">✕</button>
+          </div>
         </div>
         <div id="panel-body" class="panel-content"></div>
         <div class="panel-footer">
@@ -408,9 +414,31 @@
       return isFinite(n) ? n.toFixed(digits) : "0.0";
     }
 
+    // DSL の \n を改行へ戻す。$...$ / $$...$$ の内側は LaTeX（\nu 等）を保護する。
+    // これにより、英文行頭など「改行の直後が英字」の場合でも改行が復元される。
     function unescapeDetailMarkdown(raw) {
       if (!raw) return '';
-      return String(raw).replace(/\\n(?![a-zA-Z])/g, '\n');
+      const s = String(raw);
+      let out = '';
+      let inMath = false;
+      for (let i = 0; i < s.length; i++) {
+        const ch = s[i];
+        if (ch === '$') {
+          if (s[i + 1] === '$') { inMath = !inMath; out += '$$'; i++; }
+          else { inMath = !inMath; out += '$'; }
+          continue;
+        }
+        if (ch === '\\' && s[i + 1] === 'n') {
+          const next = s[i + 2];
+          if (!inMath || next === undefined || !/[a-zA-Z]/.test(next)) {
+            out += '\n';
+            i++;
+            continue;
+          }
+        }
+        out += ch;
+      }
+      return out;
     }
 
     // SVG 断片の軽量サニタイズ（script / foreignObject / on* ハンドラ / javascript: を除去）。
@@ -940,6 +968,9 @@
       // 🌟 エッジのフォーカス選択管理 & クイックツールバー (+0.5KB)
       let selectedEdgeIdx = null;
 
+      // 🌟 detail を持つノードだけ詳細パネルを開くオプション（既定 off）
+      let detailOnlyWithData = false;
+
       function updateEdgeQuickToolbar(idx) {
         const tb = document.getElementById('edge-quick-toolbar');
         if (!tb) return;
@@ -1266,6 +1297,16 @@
           return;
         }
 
+        // detail を持つノードだけ詳細パネルを開くオプション:
+        // detail が無ければパネルを開かず（開いていれば閉じ）、選択リングだけ残す。
+        if (detailOnlyWithData && !(obj.data && obj.data.detail)) {
+          closeDetailPanel({ clearSelection: false });
+          updateConnectionSummary(id);
+          updateQuickToolbar(id);
+          logBar.innerText = `[フォーカス] ノード '${id}'（detail なし → 詳細パネル非表示）`;
+          return;
+        }
+
         const panel = document.getElementById('detail-panel');
         const badge = document.getElementById('panel-type-badge');
         const idLabel = document.getElementById('panel-node-id');
@@ -1298,29 +1339,32 @@
               contentEl.textContent = d.content;
               body.appendChild(contentEl);
             }
+          }
 
-            if (obj.type === 'math' && d.latex) {
-              const mathBox = document.createElement('div');
-              mathBox.className = 'math-block';
-              renderKatexInto(mathBox, d.latex, true);
-              body.appendChild(mathBox);
-            }
+          // 型固有の内容は detail の有無に関わらず表示（math の LaTeX・svg・table が消えないように）
+          if (obj.type === 'math' && d.latex) {
+            const mathBox = document.createElement('div');
+            mathBox.className = 'math-block';
+            renderKatexInto(mathBox, d.latex, true);
+            body.appendChild(mathBox);
+          }
 
-            if (obj.type === 'svg' && d.svg_content) {
-              const svgBox = document.createElement('div');
-              svgBox.style.cssText = 'margin:12px 0; text-align:center;';
-              svgBox.innerHTML = sanitizeSvgMarkup(d.svg_content);
-              body.appendChild(svgBox);
-            }
+          if (obj.type === 'svg' && d.svg_content) {
+            const svgBox = document.createElement('div');
+            svgBox.style.cssText = 'margin:12px 0; text-align:center;';
+            svgBox.innerHTML = sanitizeSvgMarkup(d.svg_content);
+            body.appendChild(svgBox);
+          }
 
-            if (obj.type === 'table' && (d.headers || d.rows)) {
-              CanvasTable.appendTable(
-                body,
-                CanvasTable.parseNodeFields(d.headers || d.cols, d.rows),
-                { firstColEmphasis: true }
-              );
-            }
+          if (obj.type === 'table' && (d.headers || d.rows)) {
+            CanvasTable.appendTable(
+              body,
+              CanvasTable.parseNodeFields(d.headers || d.cols, d.rows),
+              { firstColEmphasis: true }
+            );
+          }
 
+          if (!d.detail) {
             const autoNote = document.createElement('div');
             autoNote.style.cssText = 'margin-top:16px; padding:8px 10px; background:rgba(255,255,255,0.03); border-radius:6px; font-size:11px; color:var(--log-color); border-left:2px solid var(--brand-color);';
             autoNote.innerHTML = '💡 <strong>ヒント:</strong> DSLに <code>detail="..."</code> を記述すると、Markdown・数式・SVGによる専用解説を展開できます。';
@@ -1375,7 +1419,7 @@
         }
 
         const keepPanelOpen = isDetailPanelOpen();
-        const focusOpts = { openDetail: keepPanelOpen };
+        const focusOpts = { openDetail: keepPanelOpen || detailOnlyWithData };
 
         const dirMap = {
           'ArrowRight': 'R',
@@ -1732,6 +1776,7 @@
           });
           return list;
         },
+        layoutDirection: 'LR',
         getFullState: function() {
           const objs = [];
           objects.forEach(o => {
@@ -1801,7 +1846,7 @@
               this.connect(e.u, e.v, { label: e.label || '', style: e.style });
             }
           });
-          this.autoLayout('LR');
+          this.autoLayout();
           sorted.forEach((item) => {
             const data = item.data || {};
             if (data.x !== undefined && data.y !== undefined) {
@@ -1905,8 +1950,14 @@
           createEdgeDom(edge, edges.length - 1);
           updateEdges();
         },
-        // 🌟 自動レイアウトエンジン (水平 LR / 垂直 TB)
-        autoLayout: function(direction = 'LR') {
+        // 🌟 自動レイアウトエンジン (→ LR 横 / ↓ TB 縦・上から下 / ↑ BT 縦・下から上)
+        autoLayout: function(direction) {
+          if (direction !== 'LR' && direction !== 'TB' && direction !== 'BT') {
+            direction = this.layoutDirection || 'LR';
+          }
+          this.layoutDirection = direction;
+          const isHorizontal = direction === 'LR';
+
           const nodeIds = [];
           objects.forEach((obj, id) => {
             if (obj.type === 'group') return;
@@ -1949,9 +2000,11 @@
 
           // レベルごとのグループ分け
           const levelGroups = new Map();
+          let maxLevel = 0;
           objects.forEach((obj, id) => {
             if (obj.type === 'group') return;
             const lvl = levels.get(id) || 0;
+            if (lvl > maxLevel) maxLevel = lvl;
             if (!levelGroups.has(lvl)) levelGroups.set(lvl, []);
             levelGroups.get(lvl).push(id);
           });
@@ -1959,19 +2012,21 @@
           // 配置座標計算
           const startX = 80, startY = 120;
           // 主軸（階層方向）の間隔を副軸（同階層の並び）より広く取り、向きを明確にする
-          const gapX = direction === 'LR' ? 340 : 150;
-          const gapY = direction === 'LR' ? 150 : 250;
+          const gapX = isHorizontal ? 340 : 150;
+          const gapY = isHorizontal ? 150 : 250;
 
           levelGroups.forEach((ids, lvl) => {
             ids.forEach((id, rank) => {
               const obj = objects.get(id);
               if (!obj) return;
-              if (direction === 'LR') {
+              // BT は階層を反転し、根を下・葉を上へ伸ばす
+              const depth = direction === 'BT' ? (maxLevel - lvl) : lvl;
+              if (isHorizontal) {
                 obj.x = startX + lvl * gapX;
                 obj.y = startY + rank * gapY;
               } else {
                 obj.x = startX + rank * gapX;
-                obj.y = startY + lvl * gapY;
+                obj.y = startY + depth * gapY;
               }
               obj.manualPos = false;
               if (obj.data) {
@@ -1987,7 +2042,14 @@
           updateGroups();
           this.fitView();
           this.syncToPython();
-          logBar.innerText = `[整列完了] ${direction === 'LR' ? '水平フロー' : '垂直ツリー'}に自動整列しました！`;
+          const dirLabel = direction === 'LR' ? '横 (→)'
+            : (direction === 'BT' ? '縦・下から上 (↑)' : '縦・上から下 (↓)');
+          logBar.innerText = `[整列完了] ${dirLabel}に自動整列しました！`;
+          if (typeof document !== 'undefined' && document.querySelectorAll) {
+            document.querySelectorAll('.layout-dir-btn').forEach(btn => {
+              btn.classList.toggle('active', btn.dataset.dir === direction);
+            });
+          }
         },
         // 🌟 簡易DSLパーサ (テキストから一括生成)
         applyDSL: function(dslText) {
@@ -2012,9 +2074,12 @@
               id = m[2];
               const rawProps = m[3];
               props = { id: id };
-              const propMatches = rawProps.matchAll(/([a-zA-Z0-9_-]+)=(?:"([^"]*)"|'([^']*)'|([^\s,\]]+))/g);
+              // \" エスケープ対応（書き手 buildExportDsl / normalizeDslText と対称）。バックスラッシュは保持（LaTeX を壊さない）。
+              const propMatches = rawProps.matchAll(/([a-zA-Z0-9_-]+)=(?:"((?:\\.|[^"\\])*)"|'([^']*)'|([^\s,\]]+))/g);
               for (const pm of propMatches) {
-                props[pm[1]] = pm[2] !== undefined ? pm[2] : (pm[3] !== undefined ? pm[3] : pm[4]);
+                props[pm[1]] = pm[2] !== undefined
+                  ? pm[2].replace(/\\"/g, '"')
+                  : (pm[3] !== undefined ? pm[3] : pm[4]);
               }
             } else {
               // 1. 矢印ショートハンド: A -> B [: ラベル]
@@ -2065,11 +2130,12 @@
               this.connect(props.to, id, { label: edgeLabel, style });
             }
           });
-          this.autoLayout('LR');
+          this.autoLayout();
           if (dslPositions.size > 0) {
             dslPositions.forEach((pos, id) => {
               const obj = objects.get(id);
               if (!obj) return;
+              obj.manualPos = true;
               obj.x = pos.x;
               obj.y = pos.y;
               if (obj.data) {
@@ -2128,7 +2194,7 @@
           objects.forEach(o => {
             const d = o.data || {};
             const props = [];
-            const skipCoords = o.type === 'group' && d.contains;
+            const skipCoords = (o.type === 'group' && d.contains) || !o.manualPos;
             if (!skipCoords) {
               props.push(`x=${Math.round(o.x)}`);
               props.push(`y=${Math.round(o.y)}`);
@@ -2221,6 +2287,29 @@
             return;
           }
           menu.classList.toggle('hidden');
+        },
+        detailOnlyWithData: false,
+        toggleDetailOnly: function() {
+          detailOnlyWithData = !detailOnlyWithData;
+          this.detailOnlyWithData = detailOnlyWithData;
+          try { localStorage.setItem('ai-canvas.detailOnlyWithData', detailOnlyWithData ? '1' : '0'); } catch (e) {}
+          this.refreshDetailOnlyLabel();
+          logBar.innerText = detailOnlyWithData
+            ? '[設定] detail を持つノードだけ詳細パネルを開きます'
+            : '[設定] どのノードでも詳細パネルを開きます';
+        },
+        refreshDetailOnlyLabel: function() {
+          const btn = document.getElementById('menu-detail-only');
+          if (btn) btn.textContent = detailOnlyWithData ? '📄 詳細: detail ありのみ ✓' : '📄 詳細: 常に開く';
+        },
+        initDetailOption: function() {
+          try {
+            const saved = localStorage.getItem('ai-canvas.detailOnlyWithData');
+            if (saved === '1') detailOnlyWithData = true;
+            else if (saved === '0') detailOnlyWithData = false;
+          } catch (e) {}
+          this.detailOnlyWithData = detailOnlyWithData;
+          this.refreshDetailOnlyLabel();
         },
         selectNode: function(id, opts) {
           selectNode(id, opts);
@@ -2503,6 +2592,7 @@
     window.addEventListener('DOMContentLoaded', () => {
       scheduleBootstrap();
       if (typeof EditorApp !== 'undefined') EditorApp.init();
+      Canvas.initDetailOption();
     });
     window.addEventListener('pywebviewready', () => {
       scheduleBootstrap();
