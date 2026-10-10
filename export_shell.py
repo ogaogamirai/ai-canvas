@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""単一 HTML のビルド（src/ → editor.html / index.html / index.export.html）と DSL 埋め込み。
+"""単一 HTML のビルド（src/ → ai-canvas.html / index.html / index.export.html）と DSL 埋め込み。
 
 ソース（手編集する正本）は `src/`:
 
@@ -11,7 +11,7 @@
 
 生成物:
 
-  editor.html         … 人間/AI コックピット（canvas + editor）
+  ai-canvas.html         … 人間/AI コックピット（canvas + editor）
   index.html          … canvas-only（エディタ層を除去）
   index.export.html   … canvas-only を minify した配布用シェル
 """
@@ -29,7 +29,7 @@ EDITOR_CSS = SRC / "editor.css"
 CANVAS_JS = SRC / "canvas.js"
 EDITOR_JS = SRC / "editor.js"
 
-EDITOR_HTML = BASE_DIR / "editor.html"
+EDITOR_HTML = BASE_DIR / "ai-canvas.html"
 INDEX_HTML = BASE_DIR / "index.html"
 EXPORT_SHELL = BASE_DIR / "index.export.html"
 
@@ -95,7 +95,7 @@ def _assemble(include_editor: bool, minify: bool = False) -> str:
 
 
 def build_editor_html() -> Path:
-    """src/ から editor.html（canvas + editor）を生成。"""
+    """src/ から ai-canvas.html（canvas + editor）を生成。"""
     EDITOR_HTML.write_text(_assemble(True), encoding="utf-8")
     return EDITOR_HTML
 
@@ -116,7 +116,7 @@ def build_export_shell(force: bool = True) -> Path:
 
 
 def build_all() -> Path:
-    """editor.html / index.html / index.export.html をまとめて生成。"""
+    """ai-canvas.html / index.html / index.export.html をまとめて生成。"""
     build_editor_html()
     build_canvas_html()
     return build_export_shell()
@@ -158,6 +158,6 @@ def _minify_css(css: str) -> str:
 if __name__ == "__main__":
     out = build_all()
     src = SRC.stat()
-    print(f"[+] editor.html      = {EDITOR_HTML.stat().st_size:,} B")
+    print(f"[+] ai-canvas.html      = {EDITOR_HTML.stat().st_size:,} B")
     print(f"[+] index.html       = {INDEX_HTML.stat().st_size:,} B")
     print(f"[+] index.export.html= {out.stat().st_size:,} B")

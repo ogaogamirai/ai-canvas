@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""src/（正本）→ editor.html / index.html（生成物）の検証。"""
+"""src/（正本）→ ai-canvas.html / index.html（生成物）の検証。"""
 import re
 import unittest
 from pathlib import Path
@@ -12,7 +12,7 @@ TEMPLATE = SRC / "template.html"
 STYLES = SRC / "styles.css"
 CANVAS_JS = SRC / "canvas.js"
 EDITOR_JS = SRC / "editor.js"
-EDITOR = BASE / "editor.html"
+EDITOR = BASE / "ai-canvas.html"
 INDEX = BASE / "index.html"
 
 

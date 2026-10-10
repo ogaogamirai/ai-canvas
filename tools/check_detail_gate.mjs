@@ -13,7 +13,7 @@ function check(name, cond) {
   if (!cond) { console.error(`FAIL: ${name}`); failed++; }
 }
 
-for (const file of ['editor.html', 'index.html']) {
+for (const file of ['ai-canvas.html', 'index.html']) {
   const html = fs.readFileSync(path.join(root, file), 'utf8');
   check(`${file}: detail gate condition`, html.includes('detailOnlyWithData && !(obj.data && obj.data.detail)'));
   check(`${file}: arrow nav honors option`, html.includes('openDetail: keepPanelOpen || detailOnlyWithData'));

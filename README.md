@@ -1,6 +1,6 @@
 # AI-Canvas — Serverless Interactive Thinking Canvas
 
-> **公開デモ（ブラウザで即試せます）**: https://ogaogamirai.github.io/ai-canvas/editor.html  
+> **公開デモ（ブラウザで即試せます）**: https://ogaogamirai.github.io/ai-canvas/ai-canvas.html  
 > **v1.0 完成（2026-10-09）／最終更新 2026-10-11** — サーバーレス・双方向同期・minify export・エッジ装飾・詳細 Markdown 表。  
 > 最新追加: `/sticky`・自動整列3方向（→ ↑ ↓）・エッジ追加直後の再整列・詳細パネルでの `detail` 編集（[`docs/DSL.md`](docs/DSL.md)）  
 > **共有ガイド**: [`docs/USER_GUIDE.md`](docs/USER_GUIDE.md) / **リリース記録**: [`docs/RELEASE_v1.md`](docs/RELEASE_v1.md)
@@ -41,7 +41,7 @@ Tools/ai-canvas/
 │   ├── editor.css    #   エディタ専用 CSS
 │   ├── canvas.js     #   キャンバスエンジン（共有 JS）
 │   └── editor.js     #   DSL Editor 層（EditorApp）
-├── editor.html       # 【生成物】src/ からビルド（canvas + editor）
+├── ai-canvas.html       # 【生成物】src/ からビルド（canvas + editor）
 ├── index.html        # 【生成物】canvas-only
 ├── index.export.html # 【生成物】canvas-only を minify した配布用シェル
 ├── export_shell.py   # ビルド（src/ → 3 成果物）+ DSL 埋め込み
@@ -60,7 +60,7 @@ Tools/ai-canvas/
 └── README.md         # 本書
 ```
 
-> **手編集する正本は `src/` のみ**。`editor.html` / `index.html` / `index.export.html` は生成物で、`python -X utf8 canvas_cli.py build-export`（＝`export_shell.build_all()`）が一括生成します。エディタ層は `@editor-only` マーカーで分離し、canvas-only ではビルドが除去します（二重管理なし・2026-10-10）。
+> **手編集する正本は `src/` のみ**。`ai-canvas.html` / `index.html` / `index.export.html` は生成物で、`python -X utf8 canvas_cli.py build-export`（＝`export_shell.build_all()`）が一括生成します。エディタ層は `@editor-only` マーカーで分離し、canvas-only ではビルドが除去します（二重管理なし・2026-10-10）。
 
 ---
 
@@ -143,7 +143,7 @@ python -X utf8 canvas_cli.py tree                       # 有向木（roots か�
 python -X utf8 canvas_cli.py clear    # キャンバス全消去
 python -X utf8 canvas_cli.py reload   # 画面リロード指示
 python -X utf8 canvas_cli.py export        # 単体 HTML（minify シェル + inbox/demo の DSL）
-python -X utf8 canvas_cli.py build-export  # src/ 変更後に editor.html / index.html / index.export.html を再生成
+python -X utf8 canvas_cli.py build-export  # src/ 変更後に ai-canvas.html / index.html / index.export.html を再生成
 python -X utf8 canvas_cli.py types    # 登録コンポーネント型一覧
 ```
 
@@ -211,7 +211,7 @@ edge: e1 [from="origin", to="einstein", label="定式化", color="#10b981", widt
 
 ### 単体 HTML エクスポートのサイズ
 
-- **人間コックピットは `editor.html`**（DSL Editor）、**canvas-only は `index.html`**、**export / GUI 保存は `index.export.html`（minify）＋ 埋め込み DSL** です。
+- **人間コックピットは `ai-canvas.html`**（DSL Editor）、**canvas-only は `index.html`**、**export / GUI 保存は `index.export.html`（minify）＋ 埋め込み DSL** です。
 - **`src/` を直したら** **`canvas_cli.py build-export`**（または `python export_shell.py`）で 3 成果物を再生成してください。export シェルが無い場合は `index.html` にフォールバックします。
 - 量子デモ程度の DSL では export 全体は **おおよそ 55 KB 前後**（正本のみ export だと約 90 KB）。`detail=` が長いと DSL 分だけ増えます。
 - 各ノードの **現在の `x` / `y`** を DSL に含めるため、ドラッグ後の配置もスナップショットで復元されます。
@@ -224,10 +224,10 @@ edge: e1 [from="origin", to="einstein", label="定式化", color="#10b981", widt
 
 | 作業 | コマンド |
 |------|----------|
-| 正本 `src/` を直したあと | `python -X utf8 canvas_cli.py build-export`（→ `editor.html` / `index.html` / `index.export.html` を再生成） |
+| 正本 `src/` を直したあと | `python -X utf8 canvas_cli.py build-export`（→ `ai-canvas.html` / `index.html` / `index.export.html` を再生成） |
 | 回帰テスト | `python -X utf8 -m unittest discover -q` |
 | 単体 HTML 配布 | GUI export または `canvas_cli.py export` |
 
-> **正本は `src/` のみ**。`editor.html` / `index.html` / `index.export.html` は生成物なので直接編集しない（`build-export` で上書きされます）。
+> **正本は `src/` のみ**。`ai-canvas.html` / `index.html` / `index.export.html` は生成物なので直接編集しない（`build-export` で上書きされます）。
 
 **Git**: ローカル正本は本フォルダ。**共有の正本**は [ogaogamirai/ai-canvas](https://github.com/ogaogamirai/ai-canvas)（public）。`src/` を直したら `canvas_cli.py build-export` → `git commit` → `git push origin master`。**閉じ役: Nova**（[`GITHUB_CLOSER_ROLES_v01.md`](../GITHUB_CLOSER_ROLES_v01.md)）。

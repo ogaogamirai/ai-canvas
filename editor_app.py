@@ -6,7 +6,7 @@ Windows WebView2 IPC 直結により、ローカルサーバーゼロで
 人間がキーボードと思考のスピードで DSL を直打ちし、リアルタイムに AI-Canvas を操ります。
 
 設計メモ:
-- 正本エンジンは `editor.html`。`index.html` / `index.export.html` は export_shell が生成する。
+- 正本エンジンは `ai-canvas.html`。`index.html` / `index.export.html` は export_shell が生成する。
 - `webview` は遅延 import（GUI を伴わない純ロジックのテストを webview 未導入でも可能にする）。
 - 旧 `canvas_app.py` の JS 契約（sync_canvas_state / get_export_shell）を後方互換で満たす。
 """
@@ -37,7 +37,7 @@ else:
 
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-HTML_PATH = os.path.join(BASE_DIR, "editor.html")
+HTML_PATH = os.path.join(BASE_DIR, "ai-canvas.html")
 STATE_FILE = os.path.join(BASE_DIR, "canvas_state.json")
 INBOX_DSL = os.path.join(BASE_DIR, "inbox_dsl.txt")
 
@@ -203,7 +203,7 @@ def _import_webview():
 
 
 def external_watcher(window):
-    """editor.html のホットリロード + inbox_dsl.txt からの外部 DSL 投入を監視。
+    """ai-canvas.html のホットリロード + inbox_dsl.txt からの外部 DSL 投入を監視。
 
     `canvas_cli.py show` 等が書く inbox_dsl.txt を検知し、開いている画面へ即時反映する。
     """

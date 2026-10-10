@@ -1,5 +1,5 @@
 // detail 編集の往復（エスケープ/パース/改行復元）と配線の検証。
-// editor.html から実物の escapeDetailMarkdown / setQuotedProp / unescapeDetailMarkdown を抽出して走らせる。
+// ai-canvas.html から実物の escapeDetailMarkdown / setQuotedProp / unescapeDetailMarkdown を抽出して走らせる。
 // 使い方: node tools/check_detail_edit.mjs
 import fs from 'fs';
 import path from 'path';
@@ -7,7 +7,7 @@ import { fileURLToPath } from 'url';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const root = path.dirname(here);
-const html = fs.readFileSync(path.join(root, 'editor.html'), 'utf8');
+const html = fs.readFileSync(path.join(root, 'ai-canvas.html'), 'utf8');
 const canvas = fs.readFileSync(path.join(root, 'src', 'canvas.js'), 'utf8');
 const editor = fs.readFileSync(path.join(root, 'src', 'editor.js'), 'utf8');
 
@@ -33,10 +33,10 @@ const escSrc = extractFn(html, 'function escapeDetailMarkdown');
 const sqSrc = extractFn(html, 'function setQuotedProp');
 const unSrc = extractFn(html, 'function unescapeDetailMarkdown');
 const qp = html.match(/const QUOTED_PROP_SRC = `[^`]*`;/);
-check('editor.html has escapeDetailMarkdown', !!escSrc);
-check('editor.html has setQuotedProp', !!sqSrc);
-check('editor.html has unescapeDetailMarkdown', !!unSrc);
-check('editor.html has QUOTED_PROP_SRC', !!qp);
+check('ai-canvas.html has escapeDetailMarkdown', !!escSrc);
+check('ai-canvas.html has setQuotedProp', !!sqSrc);
+check('ai-canvas.html has unescapeDetailMarkdown', !!unSrc);
+check('ai-canvas.html has QUOTED_PROP_SRC', !!qp);
 
 // reader regex（applyDSL / normalizeDslText と同一のものをテスト側にも固定）
 const READER_SRC = '(?:"((?:\\\\.|[^"\\\\])*)"|\'([^\']*)\'|([^\\s,\\]]+))';

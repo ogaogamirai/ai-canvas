@@ -7,7 +7,7 @@ import { fileURLToPath } from 'url';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const root = path.dirname(here);
-const html = fs.readFileSync(path.join(root, 'editor.html'), 'utf8');
+const html = fs.readFileSync(path.join(root, 'ai-canvas.html'), 'utf8');
 
 let failed = 0;
 function check(name, cond) {

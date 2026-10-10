@@ -1,5 +1,5 @@
 // 自動整列の3方向（→ LR / ↑ BT / ↓ TB）と直近方向の記憶、スラッシュ /sticky の存在確認。
-// editor.html から実物の autoLayout を抽出して走らせる。
+// ai-canvas.html から実物の autoLayout を抽出して走らせる。
 // 使い方: node tools/check_layout_modes.mjs
 import fs from 'fs';
 import path from 'path';
@@ -7,7 +7,7 @@ import { fileURLToPath } from 'url';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const root = path.dirname(here);
-const html = fs.readFileSync(path.join(root, 'editor.html'), 'utf8');
+const html = fs.readFileSync(path.join(root, 'ai-canvas.html'), 'utf8');
 
 function extract(marker) {
   const i = html.indexOf(marker);
@@ -27,7 +27,7 @@ function extract(marker) {
 
 const fnSrc = extract('autoLayout: function');
 if (!fnSrc) {
-  console.error('FAIL: autoLayout not found in editor.html');
+  console.error('FAIL: autoLayout not found in ai-canvas.html');
   process.exit(2);
 }
 
@@ -85,9 +85,9 @@ function check(name, cond) {
 }
 
 // --- 生成物の静的確認 ---
-check('editor.html: 3 layout buttons', (html.match(/layout-dir-btn/g) || []).length >= 3);
-check('editor.html: /sticky command', html.includes("'/sticky'"));
-check('editor.html: no hardcoded autoLayout(\'LR\') left in applyDSL', !html.includes("this.autoLayout('LR')"));
+check('ai-canvas.html: 3 layout buttons', (html.match(/layout-dir-btn/g) || []).length >= 3);
+check('ai-canvas.html: /sticky command', html.includes("'/sticky'"));
+check('ai-canvas.html: no hardcoded autoLayout(\'LR\') left in applyDSL', !html.includes("this.autoLayout('LR')"));
 
 if (failed === 0) {
   console.log('PASS: layout modes (LR/TB/BT) + default reuse + /sticky');

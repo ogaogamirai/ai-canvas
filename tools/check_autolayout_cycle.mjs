@@ -1,5 +1,5 @@
 // autoLayout のサイクル安全テスト。
-// editor.html から実物の autoLayout を抽出し、閉路グラフで走らせて
+// ai-canvas.html から実物の autoLayout を抽出し、閉路グラフで走らせて
 // 有限時間で終了することを確認する（従来は閉路で無限ループ＝フリーズ）。
 // 使い方: node tools/check_autolayout_cycle.mjs
 import fs from 'fs';
@@ -8,12 +8,12 @@ import { fileURLToPath } from 'url';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const root = path.dirname(here);
-const html = fs.readFileSync(path.join(root, 'editor.html'), 'utf8');
+const html = fs.readFileSync(path.join(root, 'ai-canvas.html'), 'utf8');
 
 const marker = 'autoLayout: function';
 const i = html.indexOf(marker);
 if (i < 0) {
-  console.error('autoLayout not found in editor.html');
+  console.error('autoLayout not found in ai-canvas.html');
   process.exit(2);
 }
 const braceStart = html.indexOf('{', i);
