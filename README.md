@@ -86,12 +86,15 @@ python -X utf8 canvas_app.py
 
 ### AI・外部エージェント向け — 推奨フロー（2段 CLI）
 
-**書く → 直す → 送る** の順が標準です。正規化と投入を分けると、diff で確認でき、表示不具合の切り分けも楽です。
+**書く → 検証 → 直す → 送る** の順が標準です。検証と正規化と投入を分けると、diff で確認でき、表示不具合の切り分けも楽です。
 
 ```bash
 cd G:\マイドライブ\Tools\ai-canvas
 
 # ① AI が DSL をファイルに書く（例: my_draft.txt）
+
+# ①.5 検証（行番号付きで error / warning を確認。error があれば終了コード 1）
+python -X utf8 canvas_cli.py check my_draft.txt
 
 # ② 正規化（latex / detail 内の数式エスケープを表示向けに整える）
 python -X utf8 canvas_cli.py normalize my_draft.txt -o my_draft_fixed.txt
@@ -125,7 +128,10 @@ python -X utf8 canvas_cli.py show -n my_draft.txt
 ### その他の CLI
 
 ```bash
-python -X utf8 canvas_cli.py state    # 現在の配置・接続の概要
+python -X utf8 canvas_cli.py state          # 現在の配置・接続の概要
+python -X utf8 canvas_cli.py state --json   # 生の canvas_state.json を出力（構造化JSON）
+python -X utf8 canvas_cli.py check draft.dsl            # DSL検証（行番号付き error/warning）
+python -X utf8 canvas_cli.py normalize draft.dsl --rich # 整形（色hex小文字化・重複edge除去・空行整理）
 python -X utf8 canvas_cli.py clear    # キャンバス全消去
 python -X utf8 canvas_cli.py reload   # 画面リロード指示
 python -X utf8 canvas_cli.py export        # 単体 HTML（minify シェル + inbox/demo の DSL）

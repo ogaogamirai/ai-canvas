@@ -55,7 +55,11 @@ def cmd_state(args):
         return
     with open(STATE_FILE, "r", encoding="utf-8") as f:
         data = json.load(f)
-    
+
+    if getattr(args, "json", False):
+        print(json.dumps(data, ensure_ascii=False, indent=2))
+        return
+
     print(f"=== 🎨 AI-Canvas 現在の状態 (更新: {data.get('timestamp')}) ===")
     print(f"■ オブジェクト ({len(data.get('objects', []))}件):")
     for o in data.get("objects", []):
@@ -111,7 +115,7 @@ def cmd_normalize(args):
             print(f"[+] {n} オブジェクトの latex/detail を正規化")
         out_text = json.dumps(new_state, ensure_ascii=False, indent=2) + "\n"
     else:
-        out_text, n = normalize_dsl_text(raw)
+        out_text, n = normalize_dsl_text(raw, rich=getattr(args, "rich", False))
         if n == 0:
             print("[=] 変更なし（既に正規化済み）")
             if args.check:
@@ -203,13 +207,37 @@ def cmd_export(args):
     print(f"[+] 完全自己完結した単体HTMLを保存しました ➔ {out_path}")
 
 
+def cmd_check(args):
+    """DSL を検証し、行番号付きの error / warning を表示（error があれば終了コード 1）。"""
+    from dsl_check import check_dsl_text
+
+    content, _ = _read_text_arg(args.input)
+    diags = check_dsl_text(content)
+    if not diags:
+        print("[=] 問題なし（error 0 / warning 0）")
+        return
+    for d in diags:
+        mark = "ERROR" if d["level"] == "error" else "WARN "
+        print(f"  L{d['line']:>3}: {mark} {d['message']}")
+    errors = sum(1 for d in diags if d["level"] == "error")
+    warns = sum(1 for d in diags if d["level"] == "warning")
+    print(f"[check] error={errors} warning={warns}")
+    if errors:
+        sys.exit(1)
+
+
 def main():
     parser = argparse.ArgumentParser(description="AI-Canvas CLI Controller")
     subparsers = parser.add_subparsers(dest="command")
 
     # state
-    subparsers.add_parser("state", help="キャンバスの現在配置・内容を確認")
+    p_state = subparsers.add_parser("state", help="キャンバスの現在配置・内容を確認")
+    p_state.add_argument("--json", action="store_true", help="生の canvas_state.json を出力")
     subparsers.add_parser("types", help="登録コンポーネント型の一覧")
+
+    # check
+    p_check = subparsers.add_parser("check", help="DSL を検証（行番号付き error/warning）")
+    p_check.add_argument("input", help="DSL文字列 または .dsl/.txt ファイルパス")
 
     # show
     p_show = subparsers.add_parser("show", help="DSLテキストまたはファイルをキャンバスへ投入")
@@ -243,6 +271,11 @@ def main():
         default="auto",
         help="auto: 拡張子で判定",
     )
+    p_norm.add_argument(
+        "--rich",
+        action="store_true",
+        help="整形も行う（色hex小文字化・重複edge除去・空行整理）",
+    )
 
     # clear
     subparsers.add_parser("clear", help="キャンバスの全ノードを消去してリセット")
@@ -264,6 +297,8 @@ def main():
         cmd_state(args)
     elif args.command == "types":
         cmd_types(args)
+    elif args.command == "check":
+        cmd_check(args)
     elif args.command == "show":
         cmd_show(args)
     elif args.command == "normalize":

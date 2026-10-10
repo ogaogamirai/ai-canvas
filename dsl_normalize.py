@@ -126,8 +126,60 @@ def normalize_dsl_line(line: str) -> Tuple[str, bool]:
     return new_line, True
 
 
-def normalize_dsl_text(text: str) -> Tuple[str, int]:
-    """全文正規化。変更行数を返す。"""
+HEX_CANON_KEYS = frozenset({"color", "edge_color", "edge_stroke", "arrow_color"})
+
+
+def _canon_hex(value: str) -> str:
+    return value.lower() if re.fullmatch(r"#[0-9a-fA-F]{3}|#[0-9a-fA-F]{6}", value or "") else value
+
+
+def _rich_normalize(text: str) -> Tuple[str, int]:
+    """整形のみ（意味は変えない）: 色hex小文字化・重複 edge 除去・空行整形。"""
+    out: List[str] = []
+    changes = 0
+    seen_edges = set()
+    prev_blank = False
+    for line in text.splitlines():
+        s = line.strip()
+        m = LINE_RE.match(s)
+        if m:
+            typ, oid, raw_props = m.group(1), m.group(2), m.group(3)
+            props = _parse_props(raw_props)
+            rebuilt = [
+                _format_prop(key, _canon_hex(val) if key in HEX_CANON_KEYS else val, qstyle)
+                for key, val, qstyle in props
+            ]
+            new_s = f"{typ}: {oid} [{', '.join(rebuilt)}]"
+            if new_s != s:
+                changes += 1
+            s = new_s
+            if typ == "edge":
+                pmap = {k: v for k, v, _ in props}
+                ekey = (pmap.get("from"), pmap.get("to"))
+                if ekey in seen_edges:
+                    changes += 1
+                    continue
+                seen_edges.add(ekey)
+        if s == "":
+            if prev_blank:
+                changes += 1
+                continue
+            prev_blank = True
+            out.append("")
+            continue
+        prev_blank = False
+        out.append(s)
+    while out and out[-1] == "":
+        out.pop()
+        changes += 1
+    result = "\n".join(out)
+    if text.endswith("\n") and result:
+        result += "\n"
+    return result, changes
+
+
+def normalize_dsl_text(text: str, rich: bool = False) -> Tuple[str, int]:
+    """全文正規化。変更行数を返す。rich=True で整形（色hex/重複/空行）も行う。"""
     ends_with_nl = text.endswith("\n")
     lines = text.splitlines()
     out_lines: List[str] = []
@@ -140,6 +192,9 @@ def normalize_dsl_text(text: str) -> Tuple[str, int]:
     result = "\n".join(out_lines)
     if ends_with_nl and (out_lines or text == "\n"):
         result += "\n"
+    if rich:
+        result, rich_changes = _rich_normalize(result)
+        changes += rich_changes
     return result, changes
 
 
