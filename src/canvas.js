@@ -314,22 +314,24 @@
         if (!path) return;
         const st = edge.style || {};
 
+        // 注意: SVG の presentation 属性（stroke-width 等）は CSS に負けるため、
+        //       inline style で適用する（.edge-path { stroke-width: 2.2 } を上書き）。
         if (st.stroke) {
-          path.setAttribute('stroke', st.stroke);
-          if (lbl) lbl.setAttribute('fill', st.stroke);
+          path.style.setProperty('stroke', st.stroke);
+          if (lbl) lbl.style.setProperty('fill', st.stroke);
         } else {
-          path.removeAttribute('stroke');
-          if (lbl) lbl.removeAttribute('fill');
+          path.style.removeProperty('stroke');
+          if (lbl) lbl.style.removeProperty('fill');
         }
         if (st.width != null) {
-          path.setAttribute('stroke-width', String(st.width));
+          path.style.setProperty('stroke-width', String(st.width));
         } else {
-          path.removeAttribute('stroke-width');
+          path.style.removeProperty('stroke-width');
         }
         if (st.dash) {
-          path.setAttribute('stroke-dasharray', st.dash);
+          path.style.setProperty('stroke-dasharray', st.dash);
         } else {
-          path.removeAttribute('stroke-dasharray');
+          path.style.removeProperty('stroke-dasharray');
         }
         if (st.arrow === false) {
           path.removeAttribute('marker-end');

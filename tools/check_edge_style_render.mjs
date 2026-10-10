@@ -1,0 +1,60 @@
+// エッジの width / dash / color が inline style で適用されることの回帰テスト。
+// SVG presentation 属性は CSS に負けるため、applyEdgeAppearance は inline style を使う。
+// 使い方: node tools/check_edge_style_render.mjs
+import fs from 'fs';
+import vm from 'vm';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const here = path.dirname(fileURLToPath(import.meta.url));
+const root = path.dirname(here);
+const canvasJs = fs.readFileSync(path.join(root, 'src', 'canvas.js'), 'utf8');
+
+function mkStyle() {
+  const s = {};
+  s.setProperty = (k, v) => { s[k] = v; };
+  s.removeProperty = (k) => { delete s[k]; };
+  return s;
+}
+function stub() {
+  return {
+    classList: { add() {}, remove() {}, contains() { return false; } },
+    style: mkStyle(), value: '', textContent: '', innerHTML: '',
+    setAttribute() {}, getAttribute() { return null; }, removeAttribute() {},
+    appendChild() {}, remove() {}, insertBefore() {}, addEventListener() {},
+    querySelector() { return null; }, querySelectorAll() { return []; },
+    getBoundingClientRect() { return { width: 800, height: 600, left: 0, top: 0 }; },
+    setPointerCapture() {}, releasePointerCapture() {}, focus() {}, select() {}, replaceChildren() {}
+  };
+}
+const els = {};
+const document = {
+  getElementById: (id) => (els[id] || (els[id] = stub())),
+  createElementNS: () => stub(), createElement: () => stub(), createDocumentFragment: () => stub(),
+  querySelector: () => null, querySelectorAll: () => [], addEventListener() {},
+  body: { classList: { add() {}, remove() {} }, style: {} }
+};
+const window = { addEventListener() {}, innerWidth: 1080, innerHeight: 720 };
+const context = vm.createContext({ window, document, console, setTimeout, clearTimeout, setInterval, clearInterval, Math, Array, Object, String, Number, RegExp, Set, Map, JSON, Date, isFinite });
+vm.runInContext(canvasJs, context);
+const Canvas = window.Canvas;
+
+let failed = 0;
+function check(name, cond, extra = '') {
+  if (!cond) { console.error(`FAIL ${name}: ${extra}`); failed++; }
+}
+
+Canvas.applyDSL('clear\ncard: a [title="A"]\ncard: b [title="B"]\n\nedge: e1 [from="a", to="b", width=2, dash="5,4", color="#10b981"]');
+const styled = els['path_edge_a_b_0'].style;
+check('width applied as inline style', styled['stroke-width'] === '2', JSON.stringify(styled));
+check('dash applied as inline style', styled['stroke-dasharray'] === '5,4', JSON.stringify(styled));
+check('color applied as inline style', styled['stroke'] === '#10b981', JSON.stringify(styled));
+
+Canvas.applyDSL('clear\ncard: a [title="A"]\ncard: b [title="B"]\n\nedge: e1 [from="a", to="b"]');
+const plain = els['path_edge_a_b_0'].style;
+check('no width leaves style empty', plain['stroke-width'] === undefined, JSON.stringify(plain));
+check('no dash leaves style empty', plain['stroke-dasharray'] === undefined, JSON.stringify(plain));
+check('no color leaves style empty', plain['stroke'] === undefined, JSON.stringify(plain));
+
+if (failed) process.exit(1);
+console.log('PASS: edge style render (inline style)');
