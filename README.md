@@ -41,7 +41,7 @@ Tools/ai-canvas/
 │   ├── editor.css    #   エディタ専用 CSS
 │   ├── canvas.js     #   キャンバスエンジン（共有 JS）
 │   └── editor.js     #   DSL Editor 層（EditorApp）
-├── ai-canvas.html       # 【生成物】src/ からビルド（canvas + editor）
+├── ai-canvas.html    # 【生成物】src/ からビルド（canvas + editor）
 ├── index.html        # 【生成物】canvas-only
 ├── index.export.html # 【生成物】canvas-only を minify した配布用シェル
 ├── export_shell.py   # ビルド（src/ → 3 成果物）+ DSL 埋め込み
@@ -76,8 +76,9 @@ python -X utf8 editor_app.py
 ```
 左に DSL、右にキャンバスの 2 ペイン。左で打つとミリ秒で右へ反映（20ms デバウンス）。
 `canvas_cli.py show` 等の外部投入も inbox 経由で開いたまま反映されます。
+本体ファイルは **`ai-canvas.html`**（`editor_app.py` が読み込む canvas + editor）。**AI が駆動するキャンバスも同じ `ai-canvas.html`** です。
 
-### 起動 — canvas-only（旧・AI 単独向け）
+### 起動 — canvas-only（旧・`index.html` 単体）
 ```bat
 start_canvas.bat
 ```
@@ -87,6 +88,8 @@ python -X utf8 canvas_app.py
 ```
 
 ### AI・外部エージェント向け — 推奨フロー（2段 CLI）
+
+> 駆動対象のキャンバスは **`ai-canvas.html`**（`start_editor.bat` / `editor_app.py` で起動）。`show` は起動中のアプリへ inbox/IPC 経由で反映されます。
 
 **書く → 検証 → 直す → 送る** の順が標準です。検証と正規化と投入を分けると、diff で確認でき、表示不具合の切り分けも楽です。
 
