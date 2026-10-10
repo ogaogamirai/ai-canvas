@@ -1,6 +1,8 @@
 # AI-Canvas — Serverless Interactive Thinking Canvas
 
-> **v1.0 完成（2026-10-09）** — サーバーレス・双方向同期・minify export・エッジ装飾・詳細 Markdown 表。  
+> **公開デモ（ブラウザで即試せます）**: https://ogaogamirai.github.io/ai-canvas/editor.html  
+> **v1.0 完成（2026-10-09）／最終更新 2026-10-11** — サーバーレス・双方向同期・minify export・エッジ装飾・詳細 Markdown 表。  
+> 最新追加: `/sticky`・自動整列3方向（→ ↑ ↓）・エッジ追加直後の再整列・詳細パネルでの `detail` 編集（[`docs/DSL.md`](docs/DSL.md)）  
 > **共有ガイド**: [`docs/USER_GUIDE.md`](docs/USER_GUIDE.md) / **リリース記録**: [`docs/RELEASE_v1.md`](docs/RELEASE_v1.md)
 
 > **「ローカルサーバーゼロで動く、人間とAIのための多角的思考キャンバス」**  
