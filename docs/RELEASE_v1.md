@@ -4,6 +4,10 @@
 > **台帳**: `Tools/DRIVE_REGISTRY_v01.md`（id: `ai-canvas`）  
 > **状態**: 三家・Captain 向け **運用可能な完成形**（サーバーレス・双方向同期・単体 HTML 配布）
 
+> **v1.1（2026-10-10・Nova 整備）**: DSL Editor（人間コックピット）を本実装。エンジン正本を
+> `editor.html` に一本化し、`index.html` / `index.export.html` はビルド生成物に。IPC 契約
+> （`sync_canvas_state` / `get_export_shell`）を修復、重複死コード除去、回帰テスト拡充。
+
 ---
 
 ## v1 でできること
@@ -38,15 +42,17 @@ python -X utf8 canvas_cli.py show my_draft_fixed.txt
 
 ---
 
-## メンテナ（`index.html` を直した人）
+## メンテナ（`editor.html` を直した人）
 
 ```bash
-python -X utf8 canvas_cli.py build-export
+python -X utf8 canvas_cli.py build-export   # index.html / index.export.html を再生成
 python -X utf8 -m unittest discover -q
 ```
 
-- 日常起動は **正本** `index.html` のみ  
-- **export** は `index.export.html`（無いとき正本にフォールバック）  
+- **エンジン正本は `editor.html`**（キャンバス + DSL Editor）  
+- `index.html` / `index.export.html` は **生成物**（直接編集しない）  
+- 人間コックピットは `start_editor.bat` / `editor_app.py`、canvas-only は `start_canvas.bat` / `canvas_app.py`  
+- **export** は `index.export.html`（無いとき `index.html` にフォールバック）  
 
 ---
 

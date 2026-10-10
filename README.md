@@ -33,13 +33,16 @@
 
 ```text
 Tools/ai-canvas/
-├── index.html        # キャンバス本体 (Core + プラグイン + DSL) — 開発・起動用正本
-├── index.export.html # export 用 minify シェル（build-export で再生成）
-├── export_shell.py   # minify シェル読込・DSL 埋め込み・ビルド
-├── canvas_app.py     # WebView2 起動 & 双方向同期 & 外部DSLホット監視
+├── editor.html       # ★エンジン正本（単一HTML）: キャンバス + DSL Editor（人間/AI コックピット）
+├── editor_app.py     # DSL Editor 起動（WebView2 IPC・双方向同期・inbox 監視）
+├── start_editor.bat  # DSL Editor ワンクリック起動（ASCII・依存チェック付き）
+├── index.html        # 【生成物】editor.html からエディタ層を除いた canvas-only
+├── index.export.html # 【生成物】canvas-only を minify した export 用シェル
+├── export_shell.py   # editor.html → index.html / index.export.html ビルド + DSL 埋め込み
+├── canvas_app.py     # （旧）canvas-only 起動 & inbox 監視
 ├── canvas_cli.py     # 外部AI・ターミナル用CLI操作ツール
 ├── dsl_normalize.py  # DSL / state の latex・detail 正規化（CLI と同じ規則）
-├── start_canvas.bat  # ワンクリック起動バッチ (ASCII純粋)
+├── start_canvas.bat  # （旧）canvas-only ワンクリック起動
 ├── canvas_state.json # 共有状態ファイル (全オブジェクト座標・内容・接続)
 ├── inbox_dsl.txt     # 外部からのDSL注入ポスト
 ├── quantum_demo.txt  # デモ DSL 正本
@@ -49,11 +52,24 @@ Tools/ai-canvas/
 └── README.md         # 本書
 ```
 
+> **エンジンは単一ソース（editor.html）**。人間/AI コックピットのエディタ層は `/* @editor-only:start */ 〜 end`（HTML は `<!-- ... -->`）で囲み、ビルドが canvas-only の `index.html` / `index.export.html` を生成します。旧 `index.html` との二重管理は解消済み（2026-10-10）。
+
 ---
 
 ## 3. 使い方
 
-### 起動
+### 起動 — DSL Editor（人間コックピット・推奨）
+```bat
+start_editor.bat
+```
+または
+```bash
+python -X utf8 editor_app.py
+```
+左に DSL、右にキャンバスの 2 ペイン。左で打つとミリ秒で右へ反映（20ms デバウンス）。
+`canvas_cli.py show` 等の外部投入も inbox 経由で開いたまま反映されます。
+
+### 起動 — canvas-only（旧・AI 単独向け）
 ```bat
 start_canvas.bat
 ```
@@ -184,8 +200,10 @@ edge: e1 [from="origin", to="einstein", label="定式化", color="#10b981", widt
 
 | 作業 | コマンド |
 |------|----------|
-| 本体を直したあと | `python -X utf8 canvas_cli.py build-export` |
+| 正本 `editor.html` を直したあと | `python -X utf8 canvas_cli.py build-export`（→ `index.html` と `index.export.html` を再生成） |
 | 回帰テスト | `python -X utf8 -m unittest discover -q` |
 | 単体 HTML 配布 | GUI export または `canvas_cli.py export` |
+
+> **正本は `editor.html` のみ**。`index.html` / `index.export.html` は生成物なので直接編集しない（`build-export` で上書きされます）。
 
 **Git**: ローカル正本は本フォルダ。**共有の正本**は [ogaogamirai/ai-canvas](https://github.com/ogaogamirai/ai-canvas)（public）。`index.html` 等を直したら `canvas_cli.py build-export` → `git commit` → `git push origin master`。**閉じ役: Nova**（[`GITHUB_CLOSER_ROLES_v01.md`](../GITHUB_CLOSER_ROLES_v01.md)）。

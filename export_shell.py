@@ -1,5 +1,19 @@
 # -*- coding: utf-8 -*-
-"""export 用 minify シェル（index.export.html）の読込・DSL 埋め込み・ビルド。"""
+"""単体 HTML 用シェル（index.export.html）のビルドと DSL 埋め込み。
+
+エンジン正本は **editor.html**（単一の手編集ソース）。
+`index.html` / `index.export.html` はここで editor.html から生成する派生物:
+
+  editor.html
+    │  strip_editor_regions()  …  /* @editor-only:start */ 〜 end / <!-- ... --> を除去
+    ▼
+  index.html            … canvas-only（エディタ層なし・非圧縮）
+    │  minify (esbuild / clean-css)
+    ▼
+  index.export.html     … canvas-only（minify・配布用シェル）
+
+これによりエンジンの二重管理（旧 index.html との分岐）を解消する。
+"""
 import base64
 import re
 import subprocess
@@ -7,13 +21,27 @@ import tempfile
 from pathlib import Path
 
 BASE_DIR = Path(__file__).resolve().parent
-INDEX_HTML = BASE_DIR / "index.html"
-EXPORT_SHELL = BASE_DIR / "index.export.html"
+SOURCE_HTML = BASE_DIR / "editor.html"      # 手編集正本
+INDEX_HTML = BASE_DIR / "index.html"        # 生成物（canvas-only）
+EXPORT_SHELL = BASE_DIR / "index.export.html"  # 生成物（canvas-only / minify）
 
 DSL_SCRIPT_RE = re.compile(
     r'<script\s+[^>]*id="canvas-initial-dsl"[^>]*>[\s\S]*?</script>',
     re.I,
 )
+
+# /* @editor-only:start */ ... /* @editor-only:end */  または
+# <!-- @editor-only:start --> ... <!-- @editor-only:end -->
+EDITOR_BLOCK_RE = re.compile(
+    r"/\*\s*@editor-only:start.*?@editor-only:end\s*\*/"
+    r"|<!--\s*@editor-only:start.*?@editor-only:end\s*-->",
+    re.S,
+)
+
+
+def strip_editor_regions(html: str) -> str:
+    """editor.html からエディタ専用領域を除去し、canvas-only HTML を返す。"""
+    return EDITOR_BLOCK_RE.sub("", html)
 
 
 def build_embedded_dsl_script_tag(dsl: str) -> str:
@@ -36,6 +64,13 @@ def inject_dsl_into_html(html: str, dsl: str) -> str:
     if n != 1:
         raise ValueError('canvas-initial-dsl 埋め込み箇所が見つかりません')
     return out
+
+
+def build_canvas_html() -> str:
+    """editor.html（正本）から canvas-only の index.html を生成して書き出す。"""
+    canvas = strip_editor_regions(SOURCE_HTML.read_text(encoding="utf-8"))
+    INDEX_HTML.write_text(canvas, encoding="utf-8")
+    return canvas
 
 
 def _extract_parts(html: str) -> tuple[str, str]:
@@ -90,11 +125,11 @@ def _run_cmd(cmd: list[str], stdin_text: str | None = None) -> bytes:
 
 
 def build_export_shell(force: bool = True) -> Path:
-    """正本 index.html から index.export.html を minify 生成。"""
-    html = INDEX_HTML.read_text(encoding="utf-8")
-    css, js = _extract_parts(html)
+    """正本 editor.html から canvas-only を生成し、minify して index.export.html を書く。"""
+    canvas_html = build_canvas_html()
+    css, js = _extract_parts(canvas_html)
     if not js:
-        raise RuntimeError("index.html にアプリ script がありません")
+        raise RuntimeError("editor.html（strip 後）にアプリ script がありません")
 
     with tempfile.TemporaryDirectory() as td:
         js_in = Path(td) / "app.js"
@@ -116,7 +151,7 @@ def build_export_shell(force: bool = True) -> Path:
         js_min_text = js_out.read_text(encoding="utf-8")
         css_min_text = css_min.decode("utf-8")
 
-    min_html = _rebuild_html(html, css_min_text, js_min_text)
+    min_html = _rebuild_html(canvas_html, css_min_text, js_min_text)
     if force or not EXPORT_SHELL.is_file():
         EXPORT_SHELL.write_text(min_html, encoding="utf-8")
     return EXPORT_SHELL
@@ -125,5 +160,7 @@ def build_export_shell(force: bool = True) -> Path:
 if __name__ == "__main__":
     out = build_export_shell()
     raw = out.stat().st_size
-    src = INDEX_HTML.stat().st_size
-    print(f"[+] {out.name} を生成しました ({raw:,} B, 正本より {src - raw:,} B 削減)")
+    src = SOURCE_HTML.stat().st_size
+    idx = INDEX_HTML.stat().st_size
+    print(f"[+] {INDEX_HTML.name} (canvas-only) = {idx:,} B")
+    print(f"[+] {out.name} を生成しました ({raw:,} B, 正本 editor.html {src:,} B より {src - raw:,} B 削減)")

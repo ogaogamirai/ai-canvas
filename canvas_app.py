@@ -120,6 +120,46 @@ class CanvasAPI:
             print(f"[エクスポート失敗 ⚠️] {e}")
             return f"保存失敗: {e}"
 
+    def save_dsl(self, dsl_content):
+        """DSLテキストのネイティブファイル保存"""
+        try:
+            import subprocess
+            filename = f"canvas_dsl_{time.strftime('%Y%m%d_%H%M%S')}.dsl"
+            save_path = os.path.join(BASE_DIR, filename)
+            with open(save_path, "w", encoding="utf-8") as f:
+                f.write(dsl_content)
+
+            downloads_dir = os.path.join(os.path.expanduser("~"), "Downloads")
+            if os.path.exists(downloads_dir):
+                dl_path = os.path.join(downloads_dir, filename)
+                with open(dl_path, "w", encoding="utf-8") as f:
+                    f.write(dsl_content)
+
+            subprocess.Popen(f'explorer /select,"{save_path}"')
+            print(f"\n[DSL保存 💾] DSLファイルを保存しました ➔ {save_path}")
+            return f"保存完了: {filename}"
+        except Exception as e:
+            print(f"[DSL保存失敗 ⚠️] {e}")
+            return f"保存失敗: {e}"
+
+    def open_dsl_file(self):
+        """ネイティブファイル選択ダイアログでDSL/TXTファイルを開く"""
+        try:
+            import webview
+            windows = webview.windows
+            if windows:
+                file_types = ('DSL files (*.dsl;*.txt)', 'All files (*.*)')
+                res = windows[0].create_file_dialog(webview.OPEN_DIALOG, allow_multiple=False, file_types=file_types)
+                if res and len(res) > 0:
+                    chosen_path = res[0]
+                    with open(chosen_path, "r", encoding="utf-8") as f:
+                        content = f.read()
+                    filename = os.path.basename(chosen_path)
+                    return {"success": True, "content": content, "filename": filename}
+            return {"success": False, "cancelled": True}
+        except Exception as e:
+            return {"success": False, "error": str(e)}
+
 
 def external_inbox_watcher(window):
     """外部AIからの DSL 投入ファイル (inbox_dsl.txt) および index.html の変更を常時監視してホットリロード"""

@@ -9,3 +9,6 @@ ai_canvas_snapshot_*.html
 canvas_state.json
 inbox_dsl.txt
 index_v*_backup.html
+canvas_dsl_*.dsl
+nova_window*.txt
+nova_window*.html
