@@ -1,0 +1,202 @@
+    /* ⌨️ スラッシュコマンド（/）ポップアップメニュー */
+    #slash-menu {
+      position: absolute; z-index: 500; width: 260px; max-height: 280px;
+      background: var(--header-bg); backdrop-filter: blur(16px);
+      border: 1px solid var(--header-border); border-radius: 8px;
+      box-shadow: 0 12px 32px rgba(0,0,0,0.4);
+      display: none; flex-direction: column; overflow: hidden;
+      font-size: 12px; color: var(--card-text);
+    }
+    #slash-menu.open { display: flex; }
+    .slash-menu-header {
+      padding: 6px 10px; font-size: 10px; font-weight: 700; color: var(--log-color);
+      border-bottom: 1px solid var(--header-border); text-transform: uppercase;
+      display: flex; justify-content: space-between;
+    }
+    .slash-menu-list {
+      overflow-y: auto; padding: 4px; display: flex; flex-direction: column; gap: 2px;
+    }
+    .slash-item {
+      padding: 6px 10px; border-radius: 6px; cursor: pointer;
+      display: flex; align-items: center; justify-content: space-between;
+      transition: background 0.15s;
+    }
+    .slash-item:hover, .slash-item.active {
+      background: rgba(56, 189, 248, 0.15); color: var(--brand-color);
+    }
+    .slash-item-left { display: flex; align-items: center; gap: 8px; }
+    .slash-icon { font-size: 13px; }
+    .slash-item-key { font-size: 10px; opacity: 0.6; font-family: monospace; }
+
+    /* 🛠️ ノード & エッジ & グループ頭上クイック・ツールバー (Phase 4 & Phase 5) */
+    #quick-toolbar, #edge-quick-toolbar, #group-quick-toolbar {
+      position: absolute; z-index: 900; display: none; align-items: center; gap: 4px;
+      padding: 4px 6px; border-radius: 8px;
+      background: var(--header-bg); backdrop-filter: blur(12px);
+      border: 1px solid var(--header-border); box-shadow: 0 8px 24px rgba(0,0,0,0.35);
+      transform: translate(-50%, -100%); margin-top: -10px; pointer-events: auto;
+    }
+    #quick-toolbar.open, #edge-quick-toolbar.open, #group-quick-toolbar.open { display: flex; }
+    .color-btn {
+      width: 16px; height: 16px; border-radius: 50%; border: 1.5px solid rgba(255,255,255,0.4);
+      cursor: pointer; transition: transform 0.15s; flex-shrink: 0;
+    }
+    .color-btn:hover { transform: scale(1.25); }
+    .tb-palette { display: flex; align-items: center; gap: 4px; }
+    .tb-separator { width: 1px; height: 14px; background: var(--header-border); margin: 0 2px; }
+    .tb-btn {
+      background: none; border: none; color: var(--card-text); font-size: 11px;
+      cursor: pointer; padding: 2px 6px; border-radius: 4px; display: flex; align-items: center; gap: 3px;
+    }
+    .tb-btn:hover { background: rgba(255,255,255,0.1); color: var(--brand-color); }
+    .tb-btn.danger:hover { background: rgba(239,68,68,0.2); color: #ef4444; }
+    
+    /* 🔲 グループ作成ピッカーモーダル (Phase 5) */
+    #group-picker-overlay {
+      position: fixed; inset: 0; background: rgba(0,0,0,0.65); z-index: 2100; display: none;
+      align-items: center; justify-content: center; padding: 20px;
+    }
+    #group-picker-overlay.open { display: flex; }
+    .group-picker-card {
+      width: 420px; max-width: 95vw; background: var(--header-bg); backdrop-filter: blur(20px);
+      border: 1px solid var(--header-border); border-radius: 12px;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Hiragino Sans", "Hiragino Kaku Gothic ProN", "Yu Gothic UI", "Yu Gothic", Meiryo, sans-serif;
+      padding: 18px 22px; font-size: 13px; box-shadow: 0 20px 48px rgba(0,0,0,0.5);
+      display: flex; flex-direction: column; gap: 14px; color: var(--card-text);
+    }
+    .group-picker-header {
+      display: flex; align-items: center; justify-content: space-between;
+      border-bottom: 1px solid var(--header-border); padding-bottom: 10px;
+    }
+    .group-picker-header h3 { margin: 0; font-size: 14px; font-weight: 700; color: var(--brand-color); display: flex; align-items: center; gap: 6px; }
+    .group-picker-close { background: none; border: none; color: var(--log-color); font-size: 16px; cursor: pointer; padding: 2px 6px; border-radius: 4px; }
+    .group-picker-close:hover { background: rgba(255,255,255,0.1); color: var(--card-text); }
+    .group-input-group { display: flex; flex-direction: column; gap: 5px; }
+    .group-input-label { font-size: 11px; font-weight: 600; color: var(--log-color); }
+    .group-picker-input {
+      background: rgba(0,0,0,0.25); border: 1px solid var(--header-border); border-radius: 6px;
+      color: var(--card-text); padding: 7px 10px; font-size: 12px; outline: none;
+    }
+    .group-picker-input:focus { border-color: var(--brand-color); }
+    .group-picker-list-header {
+      display: flex; align-items: center; justify-content: space-between; font-size: 11px; color: var(--log-color); margin-top: 4px;
+    }
+    .group-picker-list {
+      max-height: 190px; overflow-y: auto; display: flex; flex-direction: column; gap: 4px;
+      padding: 6px; background: rgba(0,0,0,0.2); border-radius: 6px; border: 1px solid var(--header-border);
+    }
+    .group-node-item {
+      display: flex; align-items: center; gap: 8px; padding: 6px 8px; border-radius: 6px;
+      cursor: pointer; user-select: none; transition: background 0.15s; font-size: 12px;
+    }
+    .group-node-item:hover { background: rgba(56, 189, 248, 0.12); }
+    .group-node-item input[type="checkbox"] { cursor: pointer; margin: 0; width: 14px; height: 14px; accent-color: var(--brand-color); }
+    .group-node-color-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; border: 1px solid rgba(255,255,255,0.2); }
+    .group-node-id { font-family: monospace; font-size: 11px; opacity: 0.75; flex-shrink: 0; }
+    .group-node-title { flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-weight: 500; }
+    .group-picker-footer {
+      display: flex; align-items: center; justify-content: space-between; border-top: 1px solid var(--header-border); padding-top: 12px;
+    }
+    
+    /* 📝 DSL エディタペイン */
+    #editor-pane {
+      width: 380px; min-width: 260px; max-width: 80vw; height: 100%;
+      display: flex; flex-direction: column;
+      background: var(--card-bg);
+      border-right: 1px solid var(--header-border);
+      position: relative; z-index: 100;
+      transition: margin-left 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    #editor-pane.collapsed {
+      margin-left: -380px;
+    }
+
+    /* エディタヘッダー */
+    .editor-header {
+      height: var(--header-h); padding: 0 12px;
+      display: flex; align-items: center; justify-content: space-between;
+      border-bottom: 1px solid var(--header-border);
+      background: var(--header-bg); backdrop-filter: blur(10px);
+      flex-shrink: 0;
+    }
+    .editor-title {
+      font-size: 13px; font-weight: 700; color: var(--brand-color);
+      display: flex; align-items: center; gap: 6px;
+    }
+    .editor-actions {
+      display: flex; align-items: center; gap: 4px;
+    }
+
+    /* エディタ本体（行番号 + テキストエリア） */
+    .editor-body {
+      flex: 1; display: flex; overflow: hidden; position: relative;
+      background: rgba(0, 0, 0, 0.18);
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+    }
+    body.theme-natural .editor-body {
+      background: rgba(0, 0, 0, 0.03);
+    }
+
+    .editor-line-numbers {
+      width: 38px; padding: 12px 6px 12px 0; text-align: right;
+      color: var(--log-color); opacity: 0.55; font-size: 12px; line-height: 20px;
+      user-select: none; border-right: 1px solid var(--header-border);
+      overflow: hidden; flex-shrink: 0; white-space: pre;
+    }
+
+    .editor-textarea {
+      flex: 1; height: 100%; padding: 12px; margin: 0; border: none; outline: none;
+      background: transparent; color: var(--card-text);
+      font-family: inherit; font-size: 12px; line-height: 20px;
+      resize: none; white-space: pre-wrap; word-break: break-all; overflow-y: auto; overflow-x: hidden;
+      tab-size: 2; -moz-tab-size: 2;
+    }
+    .editor-textarea.no-wrap {
+      white-space: pre; word-break: normal; overflow-x: auto;
+    }
+
+    /* エディタフッター */
+    .editor-footer {
+      height: 24px; padding: 0 10px; display: flex; align-items: center; justify-content: space-between;
+      border-top: 1px solid var(--header-border); background: var(--header-bg);
+      font-size: 10px; color: var(--log-color); flex-shrink: 0;
+    }
+    .editor-status-badge {
+      display: flex; align-items: center; gap: 5px; font-weight: 600;
+    }
+    .status-dot {
+      width: 6px; height: 6px; border-radius: 50%; background: #10b981;
+    }
+    .status-dot.syncing {
+      background: #f59e0b; animation: pulse 0.5s infinite alternate;
+    }
+    .status-dot.error {
+      background: #ef4444;
+    }
+    @keyframes pulse {
+      from { opacity: 0.3; } to { opacity: 1; }
+    }
+    
+    /* ↔ スプリッターバー */
+    #splitter {
+      width: 6px; height: 100%; cursor: col-resize;
+      background: var(--header-border); opacity: 0.45;
+      transition: opacity 0.2s, background 0.2s; z-index: 101; flex-shrink: 0;
+    }
+    #splitter:hover, #splitter.dragging {
+      opacity: 1; background: var(--brand-color);
+    }
+    
+    /* エディタ展開用フローティングボタン */
+    #open-editor-btn {
+      position: absolute; top: calc(var(--header-h) + 12px); left: 12px;
+      z-index: 999; display: none;
+      background: var(--btn-bg); color: var(--brand-color);
+      border: 1px solid var(--btn-border); border-radius: 6px;
+      padding: 6px 10px; font-size: 12px; font-weight: 700;
+      cursor: pointer; box-shadow: 0 4px 12px rgba(0,0,0,0.25);
+    }
+    #open-editor-btn:hover {
+      background: var(--btn-hover-bg); border-color: var(--brand-color);
+    }
+    

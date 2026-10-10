@@ -196,59 +196,7 @@
       font-weight: 800 !important;
     }
 
-    /* @editor-only:start */
-    /* ⌨️ スラッシュコマンド（/）ポップアップメニュー */
-    #slash-menu {
-      position: absolute; z-index: 500; width: 260px; max-height: 280px;
-      background: var(--header-bg); backdrop-filter: blur(16px);
-      border: 1px solid var(--header-border); border-radius: 8px;
-      box-shadow: 0 12px 32px rgba(0,0,0,0.4);
-      display: none; flex-direction: column; overflow: hidden;
-      font-size: 12px; color: var(--card-text);
-    }
-    #slash-menu.open { display: flex; }
-    .slash-menu-header {
-      padding: 6px 10px; font-size: 10px; font-weight: 700; color: var(--log-color);
-      border-bottom: 1px solid var(--header-border); text-transform: uppercase;
-      display: flex; justify-content: space-between;
-    }
-    .slash-menu-list {
-      overflow-y: auto; padding: 4px; display: flex; flex-direction: column; gap: 2px;
-    }
-    .slash-item {
-      padding: 6px 10px; border-radius: 6px; cursor: pointer;
-      display: flex; align-items: center; justify-content: space-between;
-      transition: background 0.15s;
-    }
-    .slash-item:hover, .slash-item.active {
-      background: rgba(56, 189, 248, 0.15); color: var(--brand-color);
-    }
-    .slash-item-left { display: flex; align-items: center; gap: 8px; }
-    .slash-icon { font-size: 13px; }
-    .slash-item-key { font-size: 10px; opacity: 0.6; font-family: monospace; }
-
-    /* 🛠️ ノード & エッジ & グループ頭上クイック・ツールバー (Phase 4 & Phase 5) */
-    #quick-toolbar, #edge-quick-toolbar, #group-quick-toolbar {
-      position: absolute; z-index: 900; display: none; align-items: center; gap: 4px;
-      padding: 4px 6px; border-radius: 8px;
-      background: var(--header-bg); backdrop-filter: blur(12px);
-      border: 1px solid var(--header-border); box-shadow: 0 8px 24px rgba(0,0,0,0.35);
-      transform: translate(-50%, -100%); margin-top: -10px; pointer-events: auto;
-    }
-    #quick-toolbar.open, #edge-quick-toolbar.open, #group-quick-toolbar.open { display: flex; }
-    .color-btn {
-      width: 16px; height: 16px; border-radius: 50%; border: 1.5px solid rgba(255,255,255,0.4);
-      cursor: pointer; transition: transform 0.15s; flex-shrink: 0;
-    }
-    .color-btn:hover { transform: scale(1.25); }
-    .tb-separator { width: 1px; height: 14px; background: var(--header-border); margin: 0 2px; }
-    .tb-btn {
-      background: none; border: none; color: var(--card-text); font-size: 11px;
-      cursor: pointer; padding: 2px 6px; border-radius: 4px; display: flex; align-items: center; gap: 3px;
-    }
-    .tb-btn:hover { background: rgba(255,255,255,0.1); color: var(--brand-color); }
-    .tb-btn.danger:hover { background: rgba(239,68,68,0.2); color: #ef4444; }
-    /* @editor-only:end */
+    
 
     /* 🔗 ドラッグ結線プレビュー線 */
     #temp-edge {
@@ -341,7 +289,77 @@
       background: rgba(0,0,0,0.04); display: flex; justify-content: space-between; align-items: center;
     }
 
-    /* @editor-only:start */
+    
+
+    /* 🌟 アプリ全体スプリットレイアウト */
+    #app-container {
+      display: flex; width: 100vw; height: 100vh; overflow: hidden;
+      background: var(--bg-body); position: relative;
+    }
+
+    
+
+    
+
+    /* 🎨 キャンバス側ペイン */
+    #canvas-pane {
+      flex: 1; height: 100%; position: relative; overflow: hidden;
+    }
+
+    
+    /* ⌨️ スラッシュコマンド（/）ポップアップメニュー */
+    #slash-menu {
+      position: absolute; z-index: 500; width: 260px; max-height: 280px;
+      background: var(--header-bg); backdrop-filter: blur(16px);
+      border: 1px solid var(--header-border); border-radius: 8px;
+      box-shadow: 0 12px 32px rgba(0,0,0,0.4);
+      display: none; flex-direction: column; overflow: hidden;
+      font-size: 12px; color: var(--card-text);
+    }
+    #slash-menu.open { display: flex; }
+    .slash-menu-header {
+      padding: 6px 10px; font-size: 10px; font-weight: 700; color: var(--log-color);
+      border-bottom: 1px solid var(--header-border); text-transform: uppercase;
+      display: flex; justify-content: space-between;
+    }
+    .slash-menu-list {
+      overflow-y: auto; padding: 4px; display: flex; flex-direction: column; gap: 2px;
+    }
+    .slash-item {
+      padding: 6px 10px; border-radius: 6px; cursor: pointer;
+      display: flex; align-items: center; justify-content: space-between;
+      transition: background 0.15s;
+    }
+    .slash-item:hover, .slash-item.active {
+      background: rgba(56, 189, 248, 0.15); color: var(--brand-color);
+    }
+    .slash-item-left { display: flex; align-items: center; gap: 8px; }
+    .slash-icon { font-size: 13px; }
+    .slash-item-key { font-size: 10px; opacity: 0.6; font-family: monospace; }
+
+    /* 🛠️ ノード & エッジ & グループ頭上クイック・ツールバー (Phase 4 & Phase 5) */
+    #quick-toolbar, #edge-quick-toolbar, #group-quick-toolbar {
+      position: absolute; z-index: 900; display: none; align-items: center; gap: 4px;
+      padding: 4px 6px; border-radius: 8px;
+      background: var(--header-bg); backdrop-filter: blur(12px);
+      border: 1px solid var(--header-border); box-shadow: 0 8px 24px rgba(0,0,0,0.35);
+      transform: translate(-50%, -100%); margin-top: -10px; pointer-events: auto;
+    }
+    #quick-toolbar.open, #edge-quick-toolbar.open, #group-quick-toolbar.open { display: flex; }
+    .color-btn {
+      width: 16px; height: 16px; border-radius: 50%; border: 1.5px solid rgba(255,255,255,0.4);
+      cursor: pointer; transition: transform 0.15s; flex-shrink: 0;
+    }
+    .color-btn:hover { transform: scale(1.25); }
+    .tb-palette { display: flex; align-items: center; gap: 4px; }
+    .tb-separator { width: 1px; height: 14px; background: var(--header-border); margin: 0 2px; }
+    .tb-btn {
+      background: none; border: none; color: var(--card-text); font-size: 11px;
+      cursor: pointer; padding: 2px 6px; border-radius: 4px; display: flex; align-items: center; gap: 3px;
+    }
+    .tb-btn:hover { background: rgba(255,255,255,0.1); color: var(--brand-color); }
+    .tb-btn.danger:hover { background: rgba(239,68,68,0.2); color: #ef4444; }
+    
     /* 🔲 グループ作成ピッカーモーダル (Phase 5) */
     #group-picker-overlay {
       position: fixed; inset: 0; background: rgba(0,0,0,0.65); z-index: 2100; display: none;
@@ -388,15 +406,7 @@
     .group-picker-footer {
       display: flex; align-items: center; justify-content: space-between; border-top: 1px solid var(--header-border); padding-top: 12px;
     }
-    /* @editor-only:end */
-
-    /* 🌟 アプリ全体スプリットレイアウト */
-    #app-container {
-      display: flex; width: 100vw; height: 100vh; overflow: hidden;
-      background: var(--bg-body); position: relative;
-    }
-
-    /* @editor-only:start */
+    
     /* 📝 DSL エディタペイン */
     #editor-pane {
       width: 380px; min-width: 260px; max-width: 80vw; height: 100%;
@@ -475,9 +485,7 @@
     @keyframes pulse {
       from { opacity: 0.3; } to { opacity: 1; }
     }
-    /* @editor-only:end */
-
-    /* @editor-only:start */
+    
     /* ↔ スプリッターバー */
     #splitter {
       width: 6px; height: 100%; cursor: col-resize;
@@ -487,14 +495,7 @@
     #splitter:hover, #splitter.dragging {
       opacity: 1; background: var(--brand-color);
     }
-    /* @editor-only:end */
-
-    /* 🎨 キャンバス側ペイン */
-    #canvas-pane {
-      flex: 1; height: 100%; position: relative; overflow: hidden;
-    }
-
-    /* @editor-only:start */
+    
     /* エディタ展開用フローティングボタン */
     #open-editor-btn {
       position: absolute; top: calc(var(--header-h) + 12px); left: 12px;
@@ -507,7 +508,7 @@
     #open-editor-btn:hover {
       background: var(--btn-hover-bg); border-color: var(--brand-color);
     }
-    /* @editor-only:end */
+    
   </style>
 </head>
 <body class="theme-cool">
@@ -654,12 +655,7 @@
 
       <!-- 🛠️ ノード頭上クイック・ツールバー (Phase 4) -->
       <div id="quick-toolbar" onclick="event.stopPropagation()">
-        <span class="color-btn" style="background:#38bdf8;" title="水色 (#38bdf8)" onclick="event.stopPropagation(); EditorApp.changeSelectedNodeColor('#38bdf8')"></span>
-        <span class="color-btn" style="background:#10b981;" title="エメラルド (#10b981)" onclick="event.stopPropagation(); EditorApp.changeSelectedNodeColor('#10b981')"></span>
-        <span class="color-btn" style="background:#f43f5e;" title="ローズ (#f43f5e)" onclick="event.stopPropagation(); EditorApp.changeSelectedNodeColor('#f43f5e')"></span>
-        <span class="color-btn" style="background:#f59e0b;" title="アンバー (#f59e0b)" onclick="event.stopPropagation(); EditorApp.changeSelectedNodeColor('#f59e0b')"></span>
-        <span class="color-btn" style="background:#a855f7;" title="パープル (#a855f7)" onclick="event.stopPropagation(); EditorApp.changeSelectedNodeColor('#a855f7')"></span>
-        <span class="color-btn" style="background:#cbd5e1;" title="デフォルト (解除)" onclick="event.stopPropagation(); EditorApp.changeSelectedNodeColor('')"></span>
+        <span class="tb-palette" data-method="changeSelectedNodeColor"></span>
         <div class="tb-separator"></div>
         <button type="button" class="tb-btn" onclick="event.stopPropagation(); Canvas.openDetailPanel()" title="詳細パネルを開く">📝 詳細</button>
         <button type="button" class="tb-btn" onclick="event.stopPropagation(); EditorApp.openGroupPicker()" title="このノードを含めてグループ化">🔲 グループ</button>
@@ -668,12 +664,7 @@
 
       <!-- 🔗 エッジ頭上クイック・ツールバー (Phase 4 & Phase 5) -->
       <div id="edge-quick-toolbar" onclick="event.stopPropagation()">
-        <span class="color-btn" style="background:#38bdf8;" title="水色 (#38bdf8)" onclick="event.stopPropagation(); EditorApp.changeSelectedEdgeColor('#38bdf8')"></span>
-        <span class="color-btn" style="background:#10b981;" title="エメラルド (#10b981)" onclick="event.stopPropagation(); EditorApp.changeSelectedEdgeColor('#10b981')"></span>
-        <span class="color-btn" style="background:#f43f5e;" title="ローズ (#f43f5e)" onclick="event.stopPropagation(); EditorApp.changeSelectedEdgeColor('#f43f5e')"></span>
-        <span class="color-btn" style="background:#f59e0b;" title="アンバー (#f59e0b)" onclick="event.stopPropagation(); EditorApp.changeSelectedEdgeColor('#f59e0b')"></span>
-        <span class="color-btn" style="background:#a855f7;" title="パープル (#a855f7)" onclick="event.stopPropagation(); EditorApp.changeSelectedEdgeColor('#a855f7')"></span>
-        <span class="color-btn" style="background:#cbd5e1;" title="デフォルト (解除)" onclick="event.stopPropagation(); EditorApp.changeSelectedEdgeColor('')"></span>
+        <span class="tb-palette" data-method="changeSelectedEdgeColor"></span>
         <div class="tb-separator"></div>
         <button type="button" class="tb-btn" onclick="event.stopPropagation(); EditorApp.toggleSelectedEdgeStyle()" title="破線 / 実線 切替">〰️ 破線</button>
         <button type="button" class="tb-btn" onclick="event.stopPropagation(); EditorApp.promptSelectedEdgeLabel()" title="関係ラベルを編集">🏷️ ラベル</button>
@@ -682,12 +673,7 @@
 
       <!-- 🔲 グループ頭上クイック・ツールバー (Phase 5) -->
       <div id="group-quick-toolbar" onclick="event.stopPropagation()">
-        <span class="color-btn" style="background:#38bdf8;" title="水色 (#38bdf8)" onclick="event.stopPropagation(); EditorApp.changeSelectedGroupColor('#38bdf8')"></span>
-        <span class="color-btn" style="background:#10b981;" title="エメラルド (#10b981)" onclick="event.stopPropagation(); EditorApp.changeSelectedGroupColor('#10b981')"></span>
-        <span class="color-btn" style="background:#f43f5e;" title="ローズ (#f43f5e)" onclick="event.stopPropagation(); EditorApp.changeSelectedGroupColor('#f43f5e')"></span>
-        <span class="color-btn" style="background:#f59e0b;" title="アンバー (#f59e0b)" onclick="event.stopPropagation(); EditorApp.changeSelectedGroupColor('#f59e0b')"></span>
-        <span class="color-btn" style="background:#a855f7;" title="パープル (#a855f7)" onclick="event.stopPropagation(); EditorApp.changeSelectedGroupColor('#a855f7')"></span>
-        <span class="color-btn" style="background:#cbd5e1;" title="デフォルト (解除)" onclick="event.stopPropagation(); EditorApp.changeSelectedGroupColor('')"></span>
+        <span class="tb-palette" data-method="changeSelectedGroupColor"></span>
         <div class="tb-separator"></div>
         <button type="button" class="tb-btn" onclick="event.stopPropagation(); EditorApp.openEditGroupPicker()" title="グループ名・包含ノードを編集">⚙️ 構成編集</button>
         <button type="button" class="tb-btn danger" onclick="event.stopPropagation(); EditorApp.deleteSelectedGroup()" title="グループ枠のみ解除（内包ノードは残置）">🗑️ 解除</button>
@@ -2798,10 +2784,61 @@
       if (typeof EditorApp !== 'undefined') EditorApp.init();
     });
 
-    /* @editor-only:start */
+    
     // ==========================================
     // 📝 DSL Editor App (Phase 1: コアエディタ & リアルタイム同期)
     // ==========================================
+
+    // 🎨 頭上ツールバーの色パレット（node / edge / group 共通・重複排除）
+    const TOOLBAR_COLORS = [
+      { c: '#38bdf8', t: '水色' },
+      { c: '#10b981', t: 'エメラルド' },
+      { c: '#f43f5e', t: 'ローズ' },
+      { c: '#f59e0b', t: 'アンバー' },
+      { c: '#a855f7', t: 'パープル' },
+      { c: '#cbd5e1', t: 'デフォルト (解除)', reset: true }
+    ];
+    function buildColorPalette(method) {
+      const frag = document.createDocumentFragment();
+      TOOLBAR_COLORS.forEach(({ c, t, reset }) => {
+        const span = document.createElement('span');
+        span.className = 'color-btn';
+        span.style.background = c;
+        span.title = reset ? t : `${t} (${c})`;
+        span.addEventListener('click', (e) => {
+          e.stopPropagation();
+          if (window.EditorApp && typeof window.EditorApp[method] === 'function') {
+            window.EditorApp[method](reset ? '' : c);
+          }
+        });
+        frag.appendChild(span);
+      });
+      return frag;
+    }
+
+    // DSL 行のプロパティ（[ ] の中身）に key="value" を設定/除去する（value 空で除去）。
+    // node / edge / group の色・属性編集で共用（重複排除）。
+    function setQuotedProp(props, key, value) {
+      const re = new RegExp(`${key}=(?:"[^"]*"|'[^']*'|[^\\s,\\]]+)`);
+      if (value) {
+        if (re.test(props)) return props.replace(re, `${key}="${value}"`);
+        return props.trim() ? `${props}, ${key}="${value}"` : `${key}="${value}"`;
+      }
+      if (re.test(props)) {
+        return props
+          .replace(new RegExp(`,?\\s*${key}=(?:"[^"]*"|'[^']*'|[^\\s,\\]]+)`), '')
+          .replace(/^,\s*/, '');
+      }
+      return props;
+    }
+
+    // DSL 行全体（prefix[id props]）に対してプロパティを設定/除去する。
+    function setLineProp(line, key, value) {
+      const m = line.match(/^(.*?)\[(.*)\]$/);
+      if (!m) return line;
+      return `${m[1]}[${setQuotedProp(m[2], key, value)}]`;
+    }
+
     const EditorApp = {
       paneEl: null,
       splitterEl: null,
@@ -2868,6 +2905,7 @@
         this.initSplitter();
         this.initTextareaEvents();
         this.initButtons();
+        this.initToolbarPalettes();
         this.updateLineNumbers();
 
         // 初期DSLをエディタにロード
@@ -3029,6 +3067,13 @@
             reader.readAsText(file, 'utf-8');
           });
         }
+      },
+
+      // 頭上ツールバーの色パレットを生成（node/edge/group の重複を排除）
+      initToolbarPalettes: function() {
+        document.querySelectorAll('.tb-palette').forEach(el => {
+          el.replaceChildren(buildColorPalette(el.dataset.method));
+        });
       },
 
       // 行番号更新
@@ -3296,27 +3341,15 @@
 
       // 🌟 クイックツールバーからの色変更 (Phase 4)
       changeSelectedNodeColor: function(color) {
-        const targetId = window.selectedNodeId || (typeof selectedNodeId !== 'undefined' ? selectedNodeId : null);
+        const targetId = window.selectedNodeId;
         if (!targetId || !this.textareaEl) return;
-        const val = this.textareaEl.value;
-        const lines = val.split('\n');
+        const lines = this.textareaEl.value.split('\n');
         let modified = false;
 
         for (let i = 0; i < lines.length; i++) {
-          const line = lines[i].trim();
-          const m = line.match(/^([a-zA-Z0-9_-]+):\s*([a-zA-Z0-9_-]+)\s*\[(.*)\]$/);
+          const m = lines[i].trim().match(/^([a-zA-Z0-9_-]+):\s*([a-zA-Z0-9_-]+)\s*\[(.*)\]$/);
           if (m && m[2] === targetId) {
-            let props = m[3];
-            if (/color=(?:"[^"]*"|'[^']*'|[^\s,\]]+)/.test(props)) {
-              if (color) {
-                props = props.replace(/color=(?:"[^"]*"|'[^']*'|[^\s,\]]+)/, `color="${color}"`);
-              } else {
-                props = props.replace(/,?\s*color=(?:"[^"]*"|'[^']*'|[^\s,\]]+)/, '').replace(/^,\s*/, '');
-              }
-            } else if (color) {
-              props = props.trim() ? `${props}, color="${color}"` : `color="${color}"`;
-            }
-            lines[i] = `${m[1]}: ${m[2]} [${props}]`;
+            lines[i] = `${m[1]}: ${m[2]} [${setQuotedProp(m[3], 'color', color)}]`;
             modified = true;
             break;
           }
@@ -3363,20 +3396,9 @@
         let modified = false;
 
         for (let i = 0; i < lines.length; i++) {
-          const line = lines[i].trim();
-          const m = line.match(/^(?:group:\s*|group\s+)([a-zA-Z0-9_-]+)\s*(?:\[(.*)\])?$/);
+          const m = lines[i].trim().match(/^(?:group:\s*|group\s+)([a-zA-Z0-9_-]+)\s*(?:\[(.*)\])?$/);
           if (m && m[1] === targetId) {
-            let props = m[2] || '';
-            if (/color=(?:"[^"]*"|'[^']*'|[^\s,\]]+)/.test(props)) {
-              if (color) {
-                props = props.replace(/color=(?:"[^"]*"|'[^']*'|[^\s,\]]+)/, `color="${color}"`);
-              } else {
-                props = props.replace(/,?\s*color=(?:"[^"]*"|'[^']*'|[^\s,\]]+)/, '').replace(/^,\s*/, '');
-              }
-            } else if (color) {
-              props = props.trim() ? `${props}, color="${color}"` : `color="${color}"`;
-            }
-            lines[i] = `group: ${targetId} [${props}]`;
+            lines[i] = `group: ${targetId} [${setQuotedProp(m[2] || '', 'color', color)}]`;
             modified = true;
             break;
           }
@@ -3502,33 +3524,9 @@
         const info = this.findSelectedEdgeInfo();
         if (!info) return;
         const lines = this.textareaEl.value.split('\n');
-        let line = lines[info.lineIdx];
-
-        if (info.type === 'inline_node' || info.type === 'inline_node_rev') {
-          // ノード行内インラインエッジの場合は edge_color="..."
-          if (/edge_color=(?:"[^"]*"|'[^']*'|[^\s,\]]+)/.test(line)) {
-            if (color) {
-              line = line.replace(/edge_color=(?:"[^"]*"|'[^']*'|[^\s,\]]+)/, `edge_color="${color}"`);
-            } else {
-              line = line.replace(/,?\s*edge_color=(?:"[^"]*"|'[^']*'|[^\s,\]]+)/, '').replace(/\[\s*,/, '[');
-            }
-          } else if (color) {
-            line = line.replace(/\]$/, `, edge_color="${color}"]`).replace(/\[\s*,/, '[');
-          }
-        } else {
-          // 独立 edge 行の場合は color="..."
-          if (/color=(?:"[^"]*"|'[^']*'|[^\s,\]]+)/.test(line)) {
-            if (color) {
-              line = line.replace(/color=(?:"[^"]*"|'[^']*'|[^\s,\]]+)/, `color="${color}"`);
-            } else {
-              line = line.replace(/,?\s*color=(?:"[^"]*"|'[^']*'|[^\s,\]]+)/, '').replace(/\[\s*,/, '[');
-            }
-          } else if (color) {
-            line = line.replace(/\]$/, `, color="${color}"]`).replace(/\[\s*,/, '[');
-          }
-        }
-
-        lines[info.lineIdx] = line;
+        const inline = (info.type === 'inline_node' || info.type === 'inline_node_rev');
+        // インラインは edge_color、独立 edge 行は color を使う
+        lines[info.lineIdx] = setLineProp(lines[info.lineIdx], inline ? 'edge_color' : 'color', color);
         this.textareaEl.value = lines.join('\n');
         this.scheduleSync();
         this.setStatus('ready', `[エッジ色更新 🎨] ${info.u} ➔ ${info.v} (${color || 'デフォルト'})`);
@@ -4203,7 +4201,7 @@ edge: e5 [from="origin", to="tbl_duality", label="対比", color="#a855f7", widt
       }
     };
     window.EditorApp = EditorApp;
-    /* @editor-only:end */
+    
   </script>
 </body>
 </html>

@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <title>AI-Canvas — Serverless Interactive Thinking Canvas</title>
+  <!-- KaTeX (ローカル最優先 + CDNフォールバック) -->
+  <link rel="stylesheet" href="./vendor/katex/katex.min.css" onerror="this.onerror=null;this.href='https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css';" />
+  <script src="./vendor/katex/katex.min.js" onerror="this.onerror=null;const s=document.createElement('script');s.src='https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js';document.head.appendChild(s);"></script>
+  <style>
+{{STYLES}}
+  </style>
+</head>
+<body class="theme-cool">
+
+  <div id="app-container">
+    <!-- @editor-only:start -->
+    <!-- 📝 DSL エディタペイン -->
+    <div id="editor-pane">
+      <div class="editor-header">
+        <div class="editor-title">
+          <span>📝 DSL Editor</span>
+          <span class="badge badge-ipc">LIVE</span>
+        </div>
+        <div class="editor-actions">
+          <button type="button" class="btn-icon" id="btn-sync-from-canvas" title="最新化：キャンバスの最新配置をDSLに反映">📥</button>
+          <button type="button" class="btn-icon" id="btn-normalize-dsl" title="正規化：接続設定を独立した edge 行に整理">🧹</button>
+          <button type="button" class="btn-icon" id="btn-import-dsl" title="読込：外部のDSLファイル(.dsl, .txt)を読み込む">📂</button>
+          <button type="button" class="btn-icon" id="btn-download-dsl" title="保存：DSLテキストをローカルに保存">💾</button>
+          <button type="button" class="btn-icon" id="btn-copy-dsl" title="コピー：DSLをクリップボードへ">📋</button>
+          <button type="button" class="btn-icon" id="btn-load-demo" title="デモ：量子デモDSLを読み込む">🎬</button>
+          <button type="button" class="btn-icon" id="btn-collapse-editor" title="エディタを畳む">◀</button>
+          <input type="file" id="dsl-file-input" accept=".dsl,.txt" style="display:none">
+        </div>
+      </div>
+      <div class="editor-body">
+        <div id="editor-line-numbers" class="editor-line-numbers">1</div>
+        <textarea id="dsl-input" class="editor-textarea" spellcheck="false" placeholder="ここにDSLを入力... (1行書いてEnter、または / で補完メニュー)"></textarea>
+        <!-- ⌨️ スラッシュメニュー -->
+        <div id="slash-menu">
+          <div class="slash-menu-header">
+            <span>DSL 補完メニュー</span>
+            <span style="font-size:9px;">[↑↓] 選択 / [Enter] 決定</span>
+          </div>
+          <div id="slash-menu-list" class="slash-menu-list"></div>
+        </div>
+      </div>
+      <div class="editor-footer">
+        <div class="editor-status-badge">
+          <span id="sync-status-dot" class="status-dot"></span>
+          <span id="sync-status-text">同期完了 (0.01s)</span>
+        </div>
+        <div style="display:flex; align-items:center; gap:8px;">
+          <button type="button" id="btn-toggle-wrap" class="btn" style="padding:1px 6px; font-size:10px; height:18px; line-height:1;" title="行の折り返し表示切替">↩ 折り返し: ON</button>
+          <div id="cursor-pos-info">Ln 1, Col 1</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ↔ リサイズスプリッター -->
+    <div id="splitter" title="ドラッグで幅変更 / ダブルクリックで初期幅"></div>
+    <!-- @editor-only:end -->
+
+    <!-- 🎨 キャンバスペイン -->
+    <div id="canvas-pane">
+      <!-- @editor-only:start -->
+      <button type="button" id="open-editor-btn" title="エディタを開く" onclick="EditorApp.toggleCollapse(false)">📝 エディタ (▶)</button>
+      <!-- @editor-only:end -->
+
+      <div id="header">
+        <div class="header-row header-main">
+          <div class="brand">
+            <span>🎨 AI-Canvas</span>
+            <span class="badge badge-ipc" title="WebView2 IPC・ポートゼロ">IPC</span>
+          </div>
+          <div class="toolbar-primary">
+            <button type="button" class="btn-icon" title="水平整列 (LR)" aria-label="水平整列" onclick="Canvas.autoLayout('LR')">↔</button>
+            <button type="button" class="btn-icon" title="垂直整列 (TB)" aria-label="垂直整列" onclick="Canvas.autoLayout('TB')">↕</button>
+            <button type="button" class="btn-icon" title="全体表示 (Fit)" aria-label="全体表示" onclick="Canvas.fitView()">⊡</button>
+            <button type="button" class="btn-icon" id="theme-btn" title="テーマ切替" aria-label="テーマ切替" onclick="Canvas.toggleTheme()">☀</button>
+            <div class="menu-wrap">
+              <button type="button" class="btn-icon" title="その他" aria-label="その他メニュー" onclick="Canvas.toggleHeaderMenu()">⋯</button>
+              <div id="header-menu" class="header-menu hidden">
+                <button type="button" class="menu-item" onclick="Canvas.clear(); Canvas.toggleHeaderMenu(true)">🧹 リセット</button>
+                <button type="button" class="menu-item" onclick="Canvas.exportHTML(); Canvas.toggleHeaderMenu(true)">💾 単体HTML保存</button>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="header-row header-log">
+          <div id="log-bar">キャンバス準備完了。AIの思考描画を待機中...</div>
+        </div>
+      </div>
+
+      <!-- 📄 詳細パネル (Side Slide-in Drawer) -->
+      <div id="detail-panel">
+        <div class="panel-header">
+          <div style="display:flex; align-items:center; gap:8px;">
+            <span id="panel-type-badge" class="panel-badge">CARD</span>
+            <span id="panel-node-id" style="font-size:12px; font-family:monospace; color:var(--log-color);">#id</span>
+          </div>
+          <button class="panel-close-btn" onclick="Canvas.closeDetailPanel()" title="閉じる (Esc)">✕</button>
+        </div>
+        <div id="panel-body" class="panel-content"></div>
+        <div class="panel-footer">
+          <span id="panel-connections">🔗 接続: なし</span>
+          <span style="font-size:10px; opacity:0.7;">キー: [↑↓←→] 移動 / [Esc] 閉じる</span>
+        </div>
+      </div>
+
+      <div id="help-overlay" role="dialog" aria-label="ショートカットヘルプ" onclick="if(event.target===this)Canvas.toggleHelp(false)">
+        <div class="help-card" onclick="event.stopPropagation()">
+          <h2>ショートカット</h2>
+          <p><kbd>↑↓←→</kbd> 近傍ノードへフォーカス（詳細パネルが開いているときだけ内容も更新）</p>
+          <p><kbd>Esc</kbd> 詳細パネルを閉じる（選択リングは維持）</p>
+          <p><kbd>?</kbd> このヘルプの表示 / 閉じる</p>
+          <p style="margin-top:12px;font-size:11px;color:var(--log-color);">ノードをクリックすると詳細パネルを開きます。</p>
+          <button type="button" class="btn-icon" style="margin-top:14px;width:100%;" onclick="Canvas.toggleHelp(false)">閉じる</button>
+        </div>
+      </div>
+
+      <!-- @editor-only:start -->
+      <!-- 🔲 グループ作成ピッカーモーダル (Phase 5) -->
+      <div id="group-picker-overlay" onclick="if(event.target===this)EditorApp.closeGroupPicker()">
+        <div class="group-picker-card" onclick="event.stopPropagation()">
+          <div class="group-picker-header">
+            <h3><span>🔲</span> グループ（領域）作成</h3>
+            <button type="button" class="group-picker-close" onclick="EditorApp.closeGroupPicker()">✕</button>
+          </div>
+          <div class="group-input-group">
+            <label class="group-input-label" for="group-picker-title">グループ名</label>
+            <input type="text" id="group-picker-title" class="group-picker-input" placeholder="例: 量子力学クラスタ" value="新規グループ">
+          </div>
+          <div class="group-input-group">
+            <div class="group-picker-list-header">
+              <span>グループに含めるノードを選択 (contains)</span>
+              <div style="display:flex; gap:8px;">
+                <a href="#" style="color:var(--brand-color); text-decoration:none;" onclick="event.preventDefault(); EditorApp.toggleSelectAllGroupNodes(true)">全選択</a>
+                <a href="#" style="color:var(--log-color); text-decoration:none;" onclick="event.preventDefault(); EditorApp.toggleSelectAllGroupNodes(false)">全解除</a>
+              </div>
+            </div>
+            <div id="group-picker-node-list" class="group-picker-list">
+              <!-- 動的生成 -->
+            </div>
+          </div>
+          <div class="group-picker-footer">
+            <span id="group-picker-count" style="font-size:11px; color:var(--log-color);">選択: 0 件</span>
+            <div style="display:flex; gap:6px;">
+              <button type="button" class="btn" onclick="EditorApp.closeGroupPicker()">キャンセル</button>
+              <button type="button" class="btn btn-primary" id="btn-submit-group-picker" onclick="EditorApp.submitGroupPicker()" style="background:var(--brand-color); color:#0f172a; font-weight:700;">🔲 作成</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 🛠️ ノード頭上クイック・ツールバー (Phase 4) -->
+      <div id="quick-toolbar" onclick="event.stopPropagation()">
+        <span class="tb-palette" data-method="changeSelectedNodeColor"></span>
+        <div class="tb-separator"></div>
+        <button type="button" class="tb-btn" onclick="event.stopPropagation(); Canvas.openDetailPanel()" title="詳細パネルを開く">📝 詳細</button>
+        <button type="button" class="tb-btn" onclick="event.stopPropagation(); EditorApp.openGroupPicker()" title="このノードを含めてグループ化">🔲 グループ</button>
+        <button type="button" class="tb-btn danger" onclick="event.stopPropagation(); EditorApp.deleteSelectedNode()" title="ノードを削除">🗑️ 削除</button>
+      </div>
+
+      <!-- 🔗 エッジ頭上クイック・ツールバー (Phase 4 & Phase 5) -->
+      <div id="edge-quick-toolbar" onclick="event.stopPropagation()">
+        <span class="tb-palette" data-method="changeSelectedEdgeColor"></span>
+        <div class="tb-separator"></div>
+        <button type="button" class="tb-btn" onclick="event.stopPropagation(); EditorApp.toggleSelectedEdgeStyle()" title="破線 / 実線 切替">〰️ 破線</button>
+        <button type="button" class="tb-btn" onclick="event.stopPropagation(); EditorApp.promptSelectedEdgeLabel()" title="関係ラベルを編集">🏷️ ラベル</button>
+        <button type="button" class="tb-btn danger" onclick="event.stopPropagation(); EditorApp.deleteSelectedEdge()" title="エッジを削除">🗑️ 削除</button>
+      </div>
+
+      <!-- 🔲 グループ頭上クイック・ツールバー (Phase 5) -->
+      <div id="group-quick-toolbar" onclick="event.stopPropagation()">
+        <span class="tb-palette" data-method="changeSelectedGroupColor"></span>
+        <div class="tb-separator"></div>
+        <button type="button" class="tb-btn" onclick="event.stopPropagation(); EditorApp.openEditGroupPicker()" title="グループ名・包含ノードを編集">⚙️ 構成編集</button>
+        <button type="button" class="tb-btn danger" onclick="event.stopPropagation(); EditorApp.deleteSelectedGroup()" title="グループ枠のみ解除（内包ノードは残置）">🗑️ 解除</button>
+      </div>
+      <!-- @editor-only:end -->
+
+      <svg id="canvas">
+        <defs>
+          <!-- グリッド -->
+          <pattern id="grid" width="32" height="32" patternUnits="userSpaceOnUse">
+            <path d="M 32 0 L 0 0 0 32" fill="none" class="grid-line" />
+          </pattern>
+          <!-- 矢印マーカー -->
+          <marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+            <path id="arrow-path" d="M 0 1.5 L 8 5 L 0 8.5 z" fill="var(--arrow-fill)" />
+          </marker>
+        </defs>
+
+        <rect width="100%" height="100%" fill="url(#grid)" />
+
+        <!-- レイヤー -->
+        <g id="edges-layer"></g>
+        <path id="temp-edge" />
+        <g id="objects-layer"></g>
+      </svg>
+    </div> <!-- /#canvas-pane -->
+  </div> <!-- /#app-container -->
+
+  <script type="text/plain" id="canvas-initial-dsl" data-encoding="base64"></script>
+
+  <script>
+{{APP_JS}}
+  </script>
+</body>
+</html>

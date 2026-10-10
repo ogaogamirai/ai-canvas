@@ -33,12 +33,18 @@
 
 ```text
 Tools/ai-canvas/
-├── editor.html       # ★エンジン正本（単一HTML）: キャンバス + DSL Editor（人間/AI コックピット）
+├── src/              # ★手編集する正本（ソース）
+│   ├── template.html #   HTML シェル（エディタ層は <!-- @editor-only:start/end -->）
+│   ├── styles.css    #   共有 CSS（エディタ層は /* @editor-only:start/end */）
+│   ├── editor.css    #   エディタ専用 CSS
+│   ├── canvas.js     #   キャンバスエンジン（共有 JS）
+│   └── editor.js     #   DSL Editor 層（EditorApp）
+├── editor.html       # 【生成物】src/ からビルド（canvas + editor）
+├── index.html        # 【生成物】canvas-only
+├── index.export.html # 【生成物】canvas-only を minify した配布用シェル
+├── export_shell.py   # ビルド（src/ → 3 成果物）+ DSL 埋め込み
 ├── editor_app.py     # DSL Editor 起動（WebView2 IPC・双方向同期・inbox 監視）
 ├── start_editor.bat  # DSL Editor ワンクリック起動（ASCII・依存チェック付き）
-├── index.html        # 【生成物】editor.html からエディタ層を除いた canvas-only
-├── index.export.html # 【生成物】canvas-only を minify した export 用シェル
-├── export_shell.py   # editor.html → index.html / index.export.html ビルド + DSL 埋め込み
 ├── canvas_app.py     # （旧）canvas-only 起動 & inbox 監視
 ├── canvas_cli.py     # 外部AI・ターミナル用CLI操作ツール
 ├── dsl_normalize.py  # DSL / state の latex・detail 正規化（CLI と同じ規則）
@@ -47,12 +53,12 @@ Tools/ai-canvas/
 ├── inbox_dsl.txt     # 外部からのDSL注入ポスト
 ├── quantum_demo.txt  # デモ DSL 正本
 ├── docs/             # RELEASE_v1, USER_GUIDE, BRUSHUP_ROADMAP
-├── tools/            # build 計測スクリプト（任意）
+├── tools/            # build 計測・回帰チェックスクリプト
 ├── vendor/katex/     # オフライン数式（export 同梱は任意）
 └── README.md         # 本書
 ```
 
-> **エンジンは単一ソース（editor.html）**。人間/AI コックピットのエディタ層は `/* @editor-only:start */ 〜 end`（HTML は `<!-- ... -->`）で囲み、ビルドが canvas-only の `index.html` / `index.export.html` を生成します。旧 `index.html` との二重管理は解消済み（2026-10-10）。
+> **手編集する正本は `src/` のみ**。`editor.html` / `index.html` / `index.export.html` は生成物で、`python -X utf8 canvas_cli.py build-export`（＝`export_shell.build_all()`）が一括生成します。エディタ層は `@editor-only` マーカーで分離し、canvas-only ではビルドが除去します（二重管理なし・2026-10-10）。
 
 ---
 
@@ -123,7 +129,7 @@ python -X utf8 canvas_cli.py state    # 現在の配置・接続の概要
 python -X utf8 canvas_cli.py clear    # キャンバス全消去
 python -X utf8 canvas_cli.py reload   # 画面リロード指示
 python -X utf8 canvas_cli.py export        # 単体 HTML（minify シェル + inbox/demo の DSL）
-python -X utf8 canvas_cli.py build-export  # index.html 変更後に index.export.html を再生成
+python -X utf8 canvas_cli.py build-export  # src/ 変更後に editor.html / index.html / index.export.html を再生成
 python -X utf8 canvas_cli.py types    # 登録コンポーネント型一覧
 ```
 
@@ -187,8 +193,8 @@ edge: e1 [from="origin", to="einstein", label="定式化", color="#10b981", widt
 
 ### 単体 HTML エクスポートのサイズ
 
-- **起動は正本 `index.html`**、**export / GUI 保存は `index.export.html`（minify）＋ 埋め込み DSL** です（ライブ DOM の二重コピーはしません）。
-- `index.html` を直したら **`canvas_cli.py build-export`**（または `python export_shell.py`）で minify シェルを更新してください。無い場合は正本にフォールバックします。
+- **人間コックピットは `editor.html`**（DSL Editor）、**canvas-only は `index.html`**、**export / GUI 保存は `index.export.html`（minify）＋ 埋め込み DSL** です。
+- **`src/` を直したら** **`canvas_cli.py build-export`**（または `python export_shell.py`）で 3 成果物を再生成してください。export シェルが無い場合は `index.html` にフォールバックします。
 - 量子デモ程度の DSL では export 全体は **おおよそ 55 KB 前後**（正本のみ export だと約 90 KB）。`detail=` が長いと DSL 分だけ増えます。
 - 各ノードの **現在の `x` / `y`** を DSL に含めるため、ドラッグ後の配置もスナップショットで復元されます。
 - KaTeX は **ローカル `vendor/` 優先・失敗時 CDN**（HTML 1 枚送付＋オンラインなら vendor 同梱不要のことが多い）。
@@ -200,10 +206,10 @@ edge: e1 [from="origin", to="einstein", label="定式化", color="#10b981", widt
 
 | 作業 | コマンド |
 |------|----------|
-| 正本 `editor.html` を直したあと | `python -X utf8 canvas_cli.py build-export`（→ `index.html` と `index.export.html` を再生成） |
+| 正本 `src/` を直したあと | `python -X utf8 canvas_cli.py build-export`（→ `editor.html` / `index.html` / `index.export.html` を再生成） |
 | 回帰テスト | `python -X utf8 -m unittest discover -q` |
 | 単体 HTML 配布 | GUI export または `canvas_cli.py export` |
 
-> **正本は `editor.html` のみ**。`index.html` / `index.export.html` は生成物なので直接編集しない（`build-export` で上書きされます）。
+> **正本は `src/` のみ**。`editor.html` / `index.html` / `index.export.html` は生成物なので直接編集しない（`build-export` で上書きされます）。
 
-**Git**: ローカル正本は本フォルダ。**共有の正本**は [ogaogamirai/ai-canvas](https://github.com/ogaogamirai/ai-canvas)（public）。`index.html` 等を直したら `canvas_cli.py build-export` → `git commit` → `git push origin master`。**閉じ役: Nova**（[`GITHUB_CLOSER_ROLES_v01.md`](../GITHUB_CLOSER_ROLES_v01.md)）。
+**Git**: ローカル正本は本フォルダ。**共有の正本**は [ogaogamirai/ai-canvas](https://github.com/ogaogamirai/ai-canvas)（public）。`src/` を直したら `canvas_cli.py build-export` → `git commit` → `git push origin master`。**閉じ役: Nova**（[`GITHUB_CLOSER_ROLES_v01.md`](../GITHUB_CLOSER_ROLES_v01.md)）。

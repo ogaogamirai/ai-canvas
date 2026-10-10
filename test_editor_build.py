@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""editor.html（正本）→ index.html（canvas-only 生成物）の検証。"""
+"""src/（正本）→ editor.html / index.html（生成物）の検証。"""
 import re
 import unittest
 from pathlib import Path
@@ -7,54 +7,75 @@ from pathlib import Path
 import export_shell as es
 
 BASE = Path(__file__).resolve().parent
+SRC = BASE / "src"
+TEMPLATE = SRC / "template.html"
+STYLES = SRC / "styles.css"
+CANVAS_JS = SRC / "canvas.js"
+EDITOR_JS = SRC / "editor.js"
 EDITOR = BASE / "editor.html"
 INDEX = BASE / "index.html"
 
 
 class TestEditorBuild(unittest.TestCase):
-    def test_editor_is_source_with_balanced_markers(self):
-        html = EDITOR.read_text(encoding="utf-8")
-        self.assertGreater(html.count("@editor-only:start"), 0)
-        self.assertEqual(html.count("@editor-only:start"), html.count("@editor-only:end"))
-        self.assertIn("const EditorApp = {", html)
-        self.assertIn('id="editor-pane"', html)
+    def test_sources_exist(self):
+        for p in (TEMPLATE, STYLES, SRC / "editor.css", CANVAS_JS, EDITOR_JS):
+            self.assertTrue(p.is_file(), p.name)
 
-    def test_strip_removes_editor_regions(self):
-        stripped = es.strip_editor_regions(EDITOR.read_text(encoding="utf-8"))
+    def test_template_placeholders_and_markers(self):
+        t = TEMPLATE.read_text(encoding="utf-8")
+        self.assertIn("{{STYLES}}", t)
+        self.assertIn("{{APP_JS}}", t)
+        self.assertGreater(t.count("@editor-only:start"), 0)
+        self.assertEqual(t.count("@editor-only:start"), t.count("@editor-only:end"))
+
+    def test_editor_js_has_editorapp_canvas_js_not(self):
+        self.assertIn("const EditorApp = {", EDITOR_JS.read_text(encoding="utf-8"))
+        self.assertNotIn("const EditorApp = {", CANVAS_JS.read_text(encoding="utf-8"))
+
+    def test_strip_removes_editor_html_regions(self):
+        stripped = es.strip_editor_regions(TEMPLATE.read_text(encoding="utf-8"))
         self.assertNotIn("@editor-only", stripped)
         self.assertNotIn('id="editor-pane"', stripped)
         self.assertNotIn('id="slash-menu"', stripped)
-        self.assertNotIn("const EditorApp = {", stripped)
-        self.assertIn("const Canvas", stripped)
-        self.assertIn("registerComponent", stripped)
         self.assertIn("canvas-initial-dsl", stripped)
 
-    def test_generated_index_is_canvas_only(self):
-        self.assertTrue(INDEX.is_file(), "index.html がありません。build を実行してください")
-        html = INDEX.read_text(encoding="utf-8")
-        self.assertNotIn('id="editor-pane"', html)
-        self.assertNotIn("const EditorApp = {", html)
-        self.assertIn("const Canvas", html)
-        self.assertIn("canvas-initial-dsl", html)
+    def test_generated_editor_and_index(self):
+        self.assertTrue(EDITOR.is_file() and INDEX.is_file())
+        ed = EDITOR.read_text(encoding="utf-8")
+        ix = INDEX.read_text(encoding="utf-8")
+        self.assertIn("const EditorApp = {", ed)
+        self.assertIn('id="editor-pane"', ed)
+        self.assertNotIn("{{APP_JS}}", ed)
+        self.assertNotIn("const EditorApp = {", ix)
+        self.assertNotIn('id="editor-pane"', ix)
+        self.assertIn("const Canvas", ix)
+        self.assertIn("canvas-initial-dsl", ix)
 
     def test_text_component_sets_foreignobject_size(self):
-        # foreignObject は width/height 未設定だと 0 サイズで描画されない（TEXT 非表示バグの回帰防止）
-        html = EDITOR.read_text(encoding="utf-8")
-        m = re.search(r"registerComponent\('text',\s*\{.*?\n    \}\);", html, re.S)
+        js = CANVAS_JS.read_text(encoding="utf-8")
+        m = re.search(r"registerComponent\('text',\s*\{.*?\n    \}\);", js, re.S)
         self.assertIsNotNone(m, "text component not found")
-        block = m.group(0)
-        self.assertIn("fo.setAttribute('width'", block)
-        self.assertIn("fo.setAttribute('height'", block)
+        self.assertIn("fo.setAttribute('width'", m.group(0))
+        self.assertIn("fo.setAttribute('height'", m.group(0))
 
     def test_connect_drag_preview_not_gated_by_activedrag(self):
-        # Shift 結線時は activeDrag が null。pointermove は connectDrag を先に扱う必要がある
-        html = EDITOR.read_text(encoding="utf-8")
-        self.assertNotIn("if (!activeDrag) return;\n        // 🌟 結線ドラッグ追従", html)
+        js = CANVAS_JS.read_text(encoding="utf-8")
+        self.assertNotIn("if (!activeDrag) return;\n        // 🌟 結線ドラッグ追従", js)
+
+    def test_autolayout_refits_view(self):
+        js = CANVAS_JS.read_text(encoding="utf-8")
+        m = re.search(r"autoLayout: function.*?\n        \}", js, re.S)
+        self.assertIsNotNone(m, "autoLayout not found")
+        self.assertIn("this.fitView()", m.group(0))
+
+    def test_editorapp_has_no_duplicate_methods(self):
+        js = EDITOR_JS.read_text(encoding="utf-8")
+        for name in ("init", "initSplitter", "toggleCollapse"):
+            self.assertEqual(len(re.findall(r"\n      %s: function" % name, js)), 1, name)
 
     def test_editor_action_buttons_are_icon_only(self):
-        # ヘッダーの操作ボタンはアイコンのみ（.btn-icon）＋ title ポップアップ
-        html = EDITOR.read_text(encoding="utf-8")
-        m = re.search(r'<div class="editor-actions">(.*?)</div>', html, re.S)
+        t = TEMPLATE.read_text(encoding="utf-8")
+        m = re.search(r'<div class="editor-actions">(.*?)</div>', t, re.S)
         self.assertIsNotNone(m, "editor-actions not found")
         block = m.group(1)
         for bid in (
@@ -68,20 +89,6 @@ class TestEditorBuild(unittest.TestCase):
         ):
             self.assertIn(bid, block)
         self.assertNotIn('class="btn" id="btn-', block)
-
-    def test_autolayout_refits_view(self):
-        # 整列後に fitView しないと、整列で視界外へ出たグラフが非表示になる
-        html = EDITOR.read_text(encoding="utf-8")
-        m = re.search(r"autoLayout: function.*?\n        \}", html, re.S)
-        self.assertIsNotNone(m, "autoLayout not found")
-        self.assertIn("this.fitView()", m.group(0))
-
-    def test_editorapp_has_no_duplicate_methods(self):
-        html = EDITOR.read_text(encoding="utf-8")
-        for name in ("init", "initSplitter", "toggleCollapse"):
-            self.assertEqual(
-                len(re.findall(r"\n      %s: function" % name, html)), 1, name
-            )
 
 
 if __name__ == "__main__":
