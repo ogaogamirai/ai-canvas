@@ -50,6 +50,31 @@
       return frag;
     }
 
+    // ↔ エッジ矢印の種類（片 / 両 / なし）
+    const EDGE_ARROWS = [
+      { v: 'single', label: '→', title: '片矢印（既定）' },
+      { v: 'double', label: '↔', title: '両矢印' },
+      { v: 'none', label: '—', title: '矢印なし' }
+    ];
+    function buildArrowPalette(method) {
+      const frag = document.createDocumentFragment();
+      EDGE_ARROWS.forEach(({ v, label, title }) => {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'tb-btn';
+        btn.title = title;
+        btn.textContent = label;
+        btn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          if (window.EditorApp && typeof window.EditorApp[method] === 'function') {
+            window.EditorApp[method](v);
+          }
+        });
+        frag.appendChild(btn);
+      });
+      return frag;
+    }
+
     // DSL 行のプロパティ（[ ] の中身）に key="value" を設定/除去する（value 空で除去）。
     // node / edge / group の色・属性編集で共用（重複排除）。
     function setQuotedProp(props, key, value, quote) {
@@ -311,6 +336,9 @@
         });
         document.querySelectorAll('.tb-widths').forEach(el => {
           el.replaceChildren(buildWidthPalette(el.dataset.widthMethod));
+        });
+        document.querySelectorAll('.tb-arrows').forEach(el => {
+          el.replaceChildren(buildArrowPalette(el.dataset.arrowMethod));
         });
       },
 
@@ -797,6 +825,26 @@
         this.textareaEl.value = lines.join('\n');
         this.scheduleSync();
         this.setStatus('ready', `[エッジ太さ 🖊️] ${info.u} ➔ ${info.v} (${w})`);
+      },
+
+      // エッジ矢印の種類（片 / 両 / なし）を設定
+      setSelectedEdgeArrow: function(kind) {
+        const info = this.findSelectedEdgeInfo();
+        if (!info) return;
+        const lines = this.textareaEl.value.split('\n');
+        this.toEdgeDecl(info, lines);
+        const inline = (info.type === 'inline_node' || info.type === 'inline_node_rev');
+        const key = inline ? 'edge_arrow' : 'arrow';
+        const m = lines[info.lineIdx].match(/^(.*?)\[(.*)\]$/);
+        if (m) {
+          // 片矢印は既定なので prop を除去
+          const val = (kind === 'single') ? '' : kind;
+          lines[info.lineIdx] = `${m[1]}[${setQuotedProp(m[2], key, val, false)}]`;
+        }
+        this.textareaEl.value = lines.join('\n');
+        this.scheduleSync();
+        const label = kind === 'double' ? '両矢印 ↔' : (kind === 'none' ? '矢印なし —' : '片矢印 →');
+        this.setStatus('ready', `[エッジ矢印 ${label}] ${info.u} ➔ ${info.v}`);
       },
 
       toggleSelectedEdgeStyle: function() {

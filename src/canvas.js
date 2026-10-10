@@ -268,8 +268,10 @@
           const dStr = String(style.dash).trim();
           out.dash = (dStr === 'dashed' || dStr === 'true') ? '5,4' : dStr;
         }
-        if (style.arrow === false || style.arrow === 'false' || style.arrow === '0') {
-          out.arrow = false;
+        if (style.arrow === 'double') {
+          out.arrow = 'double';
+        } else if (style.arrow === 'none' || style.arrow === false || style.arrow === 'false' || style.arrow === '0') {
+          out.arrow = 'none';
         }
         return Object.keys(out).length ? out : null;
       }
@@ -333,11 +335,17 @@
         } else {
           path.style.removeProperty('stroke-dasharray');
         }
-        if (st.arrow === false) {
+        const markerColor = st.arrow_color || st.stroke || '';
+        if (st.arrow === 'none' || st.arrow === false) {
           path.removeAttribute('marker-end');
+          path.removeAttribute('marker-start');
+        } else if (st.arrow === 'double') {
+          const m = getOrCreateArrowMarker(markerColor);
+          path.setAttribute('marker-end', m);
+          path.setAttribute('marker-start', m);
         } else {
-          const markerColor = st.arrow_color || st.stroke || '';
           path.setAttribute('marker-end', getOrCreateArrowMarker(markerColor));
+          path.removeAttribute('marker-start');
         }
       }
 
@@ -1742,7 +1750,8 @@
               if (st.stroke) eprops.push(`color="${st.stroke}"`);
               if (st.width != null) eprops.push(`width=${st.width}`);
               if (st.dash) eprops.push(`dash="${st.dash}"`);
-              if (st.arrow === false) eprops.push('arrow=false');
+              if (st.arrow === 'none') eprops.push('arrow=none');
+              else if (st.arrow === 'double') eprops.push('arrow=double');
               if (st.arrow_color) eprops.push(`arrow_color="${st.arrow_color}"`);
               dslLines.push(`edge: e${idx + 1} [${eprops.join(', ')}]`);
             });

@@ -63,5 +63,16 @@ Canvas.applyDSL('clear\ncard: a [title="A"]\ncard: b [title="B"]\n\nedge: e1 [fr
 const pairedD = els['path_edge_a_b_0']._attrs['d'];
 check('parallel edge offset shifts path', singleD !== pairedD, `${singleD} vs ${pairedD}`);
 
+// 矢印の種類（片=既定 / 両 / なし）
+Canvas.applyDSL('clear\ncard: a [title="A"]\ncard: b [title="B"]\n\nedge: e1 [from="a", to="b"]');
+const a1 = els['path_edge_a_b_0']._attrs;
+check('default = single arrow (end only)', !!a1['marker-end'] && !a1['marker-start'], JSON.stringify(a1));
+Canvas.applyDSL('clear\ncard: a [title="A"]\ncard: b [title="B"]\n\nedge: e1 [from="a", to="b", arrow=double]');
+const a2 = els['path_edge_a_b_0']._attrs;
+check('double arrow (both ends)', !!a2['marker-end'] && !!a2['marker-start'], JSON.stringify(a2));
+Canvas.applyDSL('clear\ncard: a [title="A"]\ncard: b [title="B"]\n\nedge: e1 [from="a", to="b", arrow=none]');
+const a3 = els['path_edge_a_b_0']._attrs;
+check('no arrow', !a3['marker-end'] && !a3['marker-start'], JSON.stringify(a3));
+
 if (failed) process.exit(1);
 console.log('PASS: edge style render (inline style)');
