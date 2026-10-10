@@ -165,6 +165,8 @@
       <div id="edge-quick-toolbar" onclick="event.stopPropagation()">
         <span class="tb-palette" data-method="changeSelectedEdgeColor"></span>
         <div class="tb-separator"></div>
+        <span class="tb-widths" data-width-method="setSelectedEdgeWidth"></span>
+        <div class="tb-separator"></div>
         <button type="button" class="tb-btn" onclick="event.stopPropagation(); EditorApp.toggleSelectedEdgeStyle()" title="破線 / 実線 切替">〰️ 破線</button>
         <button type="button" class="tb-btn" onclick="event.stopPropagation(); EditorApp.promptSelectedEdgeLabel()" title="関係ラベルを編集">🏷️ ラベル</button>
         <button type="button" class="tb-btn danger" onclick="event.stopPropagation(); EditorApp.deleteSelectedEdge()" title="エッジを削除">🗑️ 削除</button>

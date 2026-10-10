@@ -20,7 +20,7 @@ function stub() {
   return {
     classList: { add() {}, remove() {}, contains() { return false; } },
     style: mkStyle(), value: '', textContent: '', innerHTML: '',
-    setAttribute() {}, getAttribute() { return null; }, removeAttribute() {},
+    _attrs: {}, setAttribute(k, v) { this._attrs[k] = v; }, getAttribute(k) { return this._attrs[k] ?? null; }, removeAttribute(k) { delete this._attrs[k]; },
     appendChild() {}, remove() {}, insertBefore() {}, addEventListener() {},
     querySelector() { return null; }, querySelectorAll() { return []; },
     getBoundingClientRect() { return { width: 800, height: 600, left: 0, top: 0 }; },
@@ -55,6 +55,13 @@ const plain = els['path_edge_a_b_0'].style;
 check('no width leaves style empty', plain['stroke-width'] === undefined, JSON.stringify(plain));
 check('no dash leaves style empty', plain['stroke-dasharray'] === undefined, JSON.stringify(plain));
 check('no color leaves style empty', plain['stroke'] === undefined, JSON.stringify(plain));
+
+// 並行エッジ（同ノード対）は少しずれて描画される
+Canvas.applyDSL('clear\ncard: a [title="A"]\ncard: b [title="B"]\n\nedge: e1 [from="a", to="b"]');
+const singleD = els['path_edge_a_b_0']._attrs['d'];
+Canvas.applyDSL('clear\ncard: a [title="A"]\ncard: b [title="B"]\n\nedge: e1 [from="a", to="b"]\nedge: e2 [from="b", to="a"]');
+const pairedD = els['path_edge_a_b_0']._attrs['d'];
+check('parallel edge offset shifts path', singleD !== pairedD, `${singleD} vs ${pairedD}`);
 
 if (failed) process.exit(1);
 console.log('PASS: edge style render (inline style)');

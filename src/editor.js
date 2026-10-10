@@ -29,13 +29,35 @@
       return frag;
     }
 
+    // 🖊️ エッジ太さプリセット（エッジ頭上ツールバー）
+    const EDGE_WIDTHS = [1.0, 1.6, 2.5, 4.0];
+    function buildWidthPalette(method) {
+      const frag = document.createDocumentFragment();
+      EDGE_WIDTHS.forEach(w => {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'tb-btn width-btn';
+        btn.title = `太さ ${w}`;
+        btn.innerHTML = `<span style="display:block;width:14px;height:${w}px;background:currentColor;border-radius:2px;"></span>`;
+        btn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          if (window.EditorApp && typeof window.EditorApp[method] === 'function') {
+            window.EditorApp[method](w);
+          }
+        });
+        frag.appendChild(btn);
+      });
+      return frag;
+    }
+
     // DSL 行のプロパティ（[ ] の中身）に key="value" を設定/除去する（value 空で除去）。
     // node / edge / group の色・属性編集で共用（重複排除）。
-    function setQuotedProp(props, key, value) {
+    function setQuotedProp(props, key, value, quote) {
       const re = new RegExp(`${key}=(?:"[^"]*"|'[^']*'|[^\\s,\\]]+)`);
-      if (value) {
-        if (re.test(props)) return props.replace(re, `${key}="${value}"`);
-        return props.trim() ? `${props}, ${key}="${value}"` : `${key}="${value}"`;
+      if (value !== '' && value != null) {
+        const token = quote === false ? `${key}=${value}` : `${key}="${value}"`;
+        if (re.test(props)) return props.replace(re, token);
+        return props.trim() ? `${props}, ${token}` : token;
       }
       if (re.test(props)) {
         return props
@@ -286,6 +308,9 @@
       initToolbarPalettes: function() {
         document.querySelectorAll('.tb-palette').forEach(el => {
           el.replaceChildren(buildColorPalette(el.dataset.method));
+        });
+        document.querySelectorAll('.tb-widths').forEach(el => {
+          el.replaceChildren(buildWidthPalette(el.dataset.widthMethod));
         });
       },
 
@@ -755,6 +780,23 @@
         this.textareaEl.value = lines.join('\n');
         this.scheduleSync();
         this.setStatus('ready', `[エッジ色更新 🎨] ${info.u} ➔ ${info.v} (${color || 'デフォルト'})`);
+      },
+
+      // エッジの太さを設定（プリセットボタンから）
+      setSelectedEdgeWidth: function(w) {
+        const info = this.findSelectedEdgeInfo();
+        if (!info) return;
+        const lines = this.textareaEl.value.split('\n');
+        this.toEdgeDecl(info, lines);
+        const inline = (info.type === 'inline_node' || info.type === 'inline_node_rev');
+        const m = lines[info.lineIdx].match(/^(.*?)\[(.*)\]$/);
+        if (m) {
+          const key = inline ? 'edge_width' : 'width';
+          lines[info.lineIdx] = `${m[1]}[${setQuotedProp(m[2], key, String(w), false)}]`;
+        }
+        this.textareaEl.value = lines.join('\n');
+        this.scheduleSync();
+        this.setStatus('ready', `[エッジ太さ 🖊️] ${info.u} ➔ ${info.v} (${w})`);
       },
 
       toggleSelectedEdgeStyle: function() {

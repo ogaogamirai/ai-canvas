@@ -40,6 +40,8 @@ const cases = [
   ['setQuotedProp remove-only', setQuotedProp('color="#000"', 'color', ''), ''],
   ['setQuotedProp add-empty', setQuotedProp('', 'color', '#fff'), 'color="#fff"'],
   ['setQuotedProp remove-absent', setQuotedProp('title="x"', 'color', ''), 'title="x"'],
+  ['setQuotedProp numeric unquoted', setQuotedProp('from="a"', 'width', '2', false), 'from="a", width=2'],
+  ['setQuotedProp numeric replace', setQuotedProp('width=3, to="b"', 'width', '2', false), 'width=2, to="b"'],
   // setLineProp
   ['setLineProp add', setLineProp('edge: e1 [from="a", to="b"]', 'color', '#fff'), 'edge: e1 [from="a", to="b", color="#fff"]'],
   ['setLineProp replace', setLineProp('edge: e1 [from="a", color="#000"]', 'color', '#fff'), 'edge: e1 [from="a", color="#fff"]'],

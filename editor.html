@@ -163,7 +163,7 @@
     .canvas-obj.dragging { filter: drop-shadow(0 14px 28px rgba(0,0,0,0.75)); }
 
     /* エッジ */
-    .edge-path { fill: none; stroke-linecap: round; stroke-width: 2.2; }
+    .edge-path { fill: none; stroke-linecap: round; stroke-width: 1.6; }
     .edge-path:not([stroke]) { stroke: var(--edge-stroke); }
     .edge-label:not([fill]) { fill: var(--edge-label); }
     .edge-label { font-size: 11px; font-weight: 600; text-anchor: middle; dominant-baseline: middle; }
@@ -352,6 +352,7 @@
     }
     .color-btn:hover { transform: scale(1.25); }
     .tb-palette { display: flex; align-items: center; gap: 4px; }
+    .width-btn { padding: 2px 5px; min-width: 22px; justify-content: center; }
     .tb-separator { width: 1px; height: 14px; background: var(--header-border); margin: 0 2px; }
     .tb-btn {
       background: none; border: none; color: var(--card-text); font-size: 11px;
@@ -665,6 +666,8 @@
       <!-- 🔗 エッジ頭上クイック・ツールバー (Phase 4 & Phase 5) -->
       <div id="edge-quick-toolbar" onclick="event.stopPropagation()">
         <span class="tb-palette" data-method="changeSelectedEdgeColor"></span>
+        <div class="tb-separator"></div>
+        <span class="tb-widths" data-width-method="setSelectedEdgeWidth"></span>
         <div class="tb-separator"></div>
         <button type="button" class="tb-btn" onclick="event.stopPropagation(); EditorApp.toggleSelectedEdgeStyle()" title="破線 / 実線 切替">〰️ 破線</button>
         <button type="button" class="tb-btn" onclick="event.stopPropagation(); EditorApp.promptSelectedEdgeLabel()" title="関係ラベルを編集">🏷️ ラベル</button>
@@ -1151,7 +1154,25 @@
         svg.addEventListener('pointercancel', endPan);
       }
 
-      function calcEdgePath(ux_raw, uy_raw, uw_raw, uh_raw, vx_raw, vy_raw, vw_raw, vh_raw) {
+      // 同じノード対（向き問わず）の並行エッジを少しずらすためのオフセット配列を返す
+      function computeEdgeOffsets() {
+        const groups = new Map();
+        edges.forEach((e, i) => {
+          const key = e.u < e.v ? `${e.u}|${e.v}` : `${e.v}|${e.u}`;
+          if (!groups.has(key)) groups.set(key, []);
+          groups.get(key).push(i);
+        });
+        const offsets = new Array(edges.length).fill(0);
+        const gap = 16;
+        groups.forEach((list) => {
+          if (list.length < 2) return;
+          list.forEach((idx, k) => { offsets[idx] = (k - (list.length - 1) / 2) * gap; });
+        });
+        return offsets;
+      }
+
+      function calcEdgePath(ux_raw, uy_raw, uw_raw, uh_raw, vx_raw, vy_raw, vw_raw, vh_raw, off_raw) {
+        const off = safeNum(off_raw, 0);
         const ux = safeNum(ux_raw, 0), uy = safeNum(uy_raw, 0);
         const uw = Math.max(20, safeNum(uw_raw, 180)), uh = Math.max(20, safeNum(uh_raw, 80));
         const vx = safeNum(vx_raw, 0), vy = safeNum(vy_raw, 0);
@@ -1160,10 +1181,11 @@
         const cx_u = ux + uw / 2, cy_u = uy + uh / 2;
         const cx_v = vx + vw / 2, cy_v = vy + vh / 2;
         const dx = cx_v - cx_u, dy = cy_v - cy_u;
+        const horizontal = Math.abs(dx) >= Math.abs(dy);
         let p1 = [ux + uw, cy_u], p2 = [vx, cy_v];
         let c1 = [p1[0] + 30, p1[1]], c2 = [p2[0] - 30, p2[1]];
 
-        if (Math.abs(dx) >= Math.abs(dy)) {
+        if (horizontal) {
           if (dx >= 0) {
             p1 = [ux + uw, cy_u]; p2 = [vx, cy_v];
             const dist = Math.max(30, Math.abs(dx) * 0.45);
@@ -1184,14 +1206,17 @@
             c1 = [p1[0], p1[1] - dist]; c2 = [p2[0], p2[1] + dist];
           }
         }
+        // 並行エッジを少しずらす（水平なら Y、垂直なら X 方向）
+        if (horizontal) { c1[1] += off; c2[1] += off; } else { c1[0] += off; c2[0] += off; }
         return {
           d: `M ${safeFixed(p1[0])} ${safeFixed(p1[1])} C ${safeFixed(c1[0])} ${safeFixed(c1[1])}, ${safeFixed(c2[0])} ${safeFixed(c2[1])}, ${safeFixed(p2[0])} ${safeFixed(p2[1])}`,
-          mx: (safeNum(p1[0]) + safeNum(p2[0])) / 2,
-          my: (safeNum(p1[1]) + safeNum(p2[1])) / 2 - 10
+          mx: (safeNum(p1[0]) + safeNum(p2[0])) / 2 + (horizontal ? 0 : off),
+          my: (safeNum(p1[1]) + safeNum(p2[1])) / 2 + (horizontal ? off : 0) - 10
         };
       }
 
       function updateEdges() {
+        const offsets = computeEdgeOffsets();
         edges.forEach((edge, idx) => {
           const u = objects.get(edge.u);
           const v = objects.get(edge.v);
@@ -1202,7 +1227,7 @@
           const lbl = document.getElementById('lbl_' + edgeId);
           if (!path) return;
 
-          const res = calcEdgePath(u.x, u.y, u.w, u.h, v.x, v.y, v.w, v.h);
+          const res = calcEdgePath(u.x, u.y, u.w, u.h, v.x, v.y, v.w, v.h, offsets[idx]);
           const hit = document.getElementById('hit_' + edgeId);
           if (hit) hit.setAttribute('d', res.d);
           path.setAttribute('d', res.d);
@@ -1232,7 +1257,7 @@
           tb.classList.remove('open');
           return;
         }
-        const res = calcEdgePath(u.x, u.y, u.w, u.h, v.x, v.y, v.w, v.h);
+        const res = calcEdgePath(u.x, u.y, u.w, u.h, v.x, v.y, v.w, v.h, computeEdgeOffsets()[idx]);
         const rect = svg.getBoundingClientRect();
         const px = ((res.mx - vb.x) / vb.w) * rect.width;
         const py = ((res.my - vb.y) / vb.h) * rect.height;
@@ -2818,13 +2843,35 @@
       return frag;
     }
 
+    // 🖊️ エッジ太さプリセット（エッジ頭上ツールバー）
+    const EDGE_WIDTHS = [1.0, 1.6, 2.5, 4.0];
+    function buildWidthPalette(method) {
+      const frag = document.createDocumentFragment();
+      EDGE_WIDTHS.forEach(w => {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'tb-btn width-btn';
+        btn.title = `太さ ${w}`;
+        btn.innerHTML = `<span style="display:block;width:14px;height:${w}px;background:currentColor;border-radius:2px;"></span>`;
+        btn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          if (window.EditorApp && typeof window.EditorApp[method] === 'function') {
+            window.EditorApp[method](w);
+          }
+        });
+        frag.appendChild(btn);
+      });
+      return frag;
+    }
+
     // DSL 行のプロパティ（[ ] の中身）に key="value" を設定/除去する（value 空で除去）。
     // node / edge / group の色・属性編集で共用（重複排除）。
-    function setQuotedProp(props, key, value) {
+    function setQuotedProp(props, key, value, quote) {
       const re = new RegExp(`${key}=(?:"[^"]*"|'[^']*'|[^\\s,\\]]+)`);
-      if (value) {
-        if (re.test(props)) return props.replace(re, `${key}="${value}"`);
-        return props.trim() ? `${props}, ${key}="${value}"` : `${key}="${value}"`;
+      if (value !== '' && value != null) {
+        const token = quote === false ? `${key}=${value}` : `${key}="${value}"`;
+        if (re.test(props)) return props.replace(re, token);
+        return props.trim() ? `${props}, ${token}` : token;
       }
       if (re.test(props)) {
         return props
@@ -3075,6 +3122,9 @@
       initToolbarPalettes: function() {
         document.querySelectorAll('.tb-palette').forEach(el => {
           el.replaceChildren(buildColorPalette(el.dataset.method));
+        });
+        document.querySelectorAll('.tb-widths').forEach(el => {
+          el.replaceChildren(buildWidthPalette(el.dataset.widthMethod));
         });
       },
 
@@ -3544,6 +3594,23 @@
         this.textareaEl.value = lines.join('\n');
         this.scheduleSync();
         this.setStatus('ready', `[エッジ色更新 🎨] ${info.u} ➔ ${info.v} (${color || 'デフォルト'})`);
+      },
+
+      // エッジの太さを設定（プリセットボタンから）
+      setSelectedEdgeWidth: function(w) {
+        const info = this.findSelectedEdgeInfo();
+        if (!info) return;
+        const lines = this.textareaEl.value.split('\n');
+        this.toEdgeDecl(info, lines);
+        const inline = (info.type === 'inline_node' || info.type === 'inline_node_rev');
+        const m = lines[info.lineIdx].match(/^(.*?)\[(.*)\]$/);
+        if (m) {
+          const key = inline ? 'edge_width' : 'width';
+          lines[info.lineIdx] = `${m[1]}[${setQuotedProp(m[2], key, String(w), false)}]`;
+        }
+        this.textareaEl.value = lines.join('\n');
+        this.scheduleSync();
+        this.setStatus('ready', `[エッジ太さ 🖊️] ${info.u} ➔ ${info.v} (${w})`);
       },
 
       toggleSelectedEdgeStyle: function() {

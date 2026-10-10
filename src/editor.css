@@ -43,6 +43,7 @@
     }
     .color-btn:hover { transform: scale(1.25); }
     .tb-palette { display: flex; align-items: center; gap: 4px; }
+    .width-btn { padding: 2px 5px; min-width: 22px; justify-content: center; }
     .tb-separator { width: 1px; height: 14px; background: var(--header-border); margin: 0 2px; }
     .tb-btn {
       background: none; border: none; color: var(--card-text); font-size: 11px;
