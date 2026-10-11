@@ -148,6 +148,8 @@ python -X utf8 canvas_cli.py reload   # 画面リロード指示
 python -X utf8 canvas_cli.py export        # 単体 HTML（minify シェル + inbox/demo の DSL）
 python -X utf8 canvas_cli.py build-export  # src/ 変更後に ai-canvas.html / index.html / index.export.html を再生成
 python -X utf8 canvas_cli.py types    # 登録コンポーネント型一覧
+python -X utf8 canvas_cli.py jsoncanvas-export -o board.canvas          # state → JSON Canvas（Obsidian 等で開ける）
+python -X utf8 canvas_cli.py jsoncanvas-import board.canvas -o out.dsl  # JSON Canvas → DSL（--to state も可）
 ```
 
 ワンライン投入（正規化なし・対話用）:
@@ -212,14 +214,35 @@ edge: e1 [from="origin", to="einstein", label="定式化", color="#10b981", widt
 - **矢印キー**: 空間的にフォーカス移動。**パネルを閉じた状態ではパネルは開かない**（選択リングのみ更新）。
 - **`?`**: ショートカットヘルプ。
 
-### 単体 HTML エクスポートのサイズ
+### 単体 HTML エクスポートのサイズ（実測 2026-10-11）
 
-- **人間コックピットは `ai-canvas.html`**（DSL Editor）、**canvas-only は `index.html`**、**export / GUI 保存は `index.export.html`（minify）＋ 埋め込み DSL** です。
-- **`src/` を直したら** **`canvas_cli.py build-export`**（または `python export_shell.py`）で 3 成果物を再生成してください。export シェルが無い場合は `index.html` にフォールバックします。
-- 量子デモ程度の DSL では export 全体は **おおよそ 55 KB 前後**（正本のみ export だと約 90 KB）。`detail=` が長いと DSL 分だけ増えます。
+| 成果物 | サイズ | 用途 |
+|---|---|---|
+| 配布単体 HTML（`index.export.html` ＋ 埋め込み DSL） | **約 62–69 KB** | 共有・閲覧（これが配るもの） |
+| `index.export.html`（minify canvas-only シェル） | 約 62 KB | export 正本 |
+| `index.html`（canvas-only） | 約 110 KB | 起動・開発 |
+| `ai-canvas.html`（人間コックピット＝canvas＋editor） | 約 203 KB | 編集 |
+| `vendor/katex/`（オフライン数式・任意） | 約 516 KB | 完全オフライン時のみ（CDN フォールバック可） |
+
+- 配布単体 HTML は **約 62–69 KB**（量子デモ相当）。`detail=` が長いと DSL 分だけ増えます。
+- オフライン数式を使う場合は `vendor/katex/`（約 516 KB）を同梱 → 合計 **約 578 KB**。CDN フォールバックなら単体 HTML だけで動きます。
+- **`src/` を直したら** **`canvas_cli.py build-export`**（または `python export_shell.py`）で 3 成果物を再生成してください。
 - 各ノードの **現在の `x` / `y`** を DSL に含めるため、ドラッグ後の配置もスナップショットで復元されます。
 - KaTeX は **ローカル `vendor/` 優先・失敗時 CDN**（HTML 1 枚送付＋オンラインなら vendor 同梱不要のことが多い）。
 - 埋め込み DSL は **Base64**（`;` や `\nu` を含む長い `detail=` でも壊れない）。開いたとき **「単体スナップショットを正常に復元しました！」** が出れば成功。
+
+### JSON Canvas 連携（相互運用）
+
+`canvas_state.json` は、無限キャンバスのオープン形式 **JSON Canvas（`.canvas`／Obsidian 発・MIT）** と相互変換できます。
+
+```bash
+python -X utf8 canvas_cli.py jsoncanvas-export -o board.canvas          # state → JSON Canvas（Obsidian 等で開ける）
+python -X utf8 canvas_cli.py jsoncanvas-import board.canvas -o out.dsl  # JSON Canvas → DSL（--to state も可）
+```
+
+- 型付きオブジェクト（math/svg/table/sticky 等）は JSON Canvas の `text` に **Markdown** として写します（math は `$$…$$`、table は Markdown 表）。
+- 座標が欠けたノード（自動整列ノードは state に x/y を持たない）は、**階層レイアウトで補完**してから書き出します（他アプリで重ならない）。
+- **完全往復**のため、各ノード/エッジに独自フィールド `ai_canvas`（他アプリは無視）を併記し、当方の import はそれを優先して復元します。
 
 ---
 

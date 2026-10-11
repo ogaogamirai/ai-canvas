@@ -325,6 +325,49 @@ def cmd_tree(args):
         print(line)
 
 
+def cmd_jsoncanvas_export(args):
+    """canvas_state.json → JSON Canvas（.canvas）出力。"""
+    from jsoncanvas_io import state_to_jsoncanvas
+
+    path = args.from_path or STATE_FILE
+    if not os.path.exists(path):
+        print(f"[-] state が見つかりません: {path}")
+        return
+    with open(path, encoding="utf-8") as f:
+        state = json.load(f)
+    jc = state_to_jsoncanvas(state)
+    out = json.dumps(jc, ensure_ascii=False, indent=2)
+    if args.output:
+        with open(args.output, "w", encoding="utf-8") as f:
+            f.write(out + "\n")
+        print(f"[+] JSON Canvas を書き出しました ➔ {args.output} ({len(jc['nodes'])} nodes, {len(jc['edges'])} edges)")
+    else:
+        print(out)
+
+
+def cmd_jsoncanvas_import(args):
+    """JSON Canvas（.canvas）→ DSL または state。"""
+    from jsoncanvas_io import jsoncanvas_to_state
+    from canvas_ops import dsl_from_state
+
+    if not os.path.exists(args.input):
+        print(f"[-] 入力が見つかりません: {args.input}")
+        return
+    with open(args.input, encoding="utf-8") as f:
+        jc = json.load(f)
+    state = jsoncanvas_to_state(jc)
+    if args.to == "state":
+        out = json.dumps(state, ensure_ascii=False, indent=2)
+    else:
+        out = dsl_from_state(state)
+    if args.output:
+        with open(args.output, "w", encoding="utf-8") as f:
+            f.write(out + "\n")
+        print(f"[+] {args.to} を書き出しました ➔ {args.output}")
+    else:
+        print(out)
+
+
 def main():
     parser = argparse.ArgumentParser(description="AI-Canvas CLI Controller")
     subparsers = parser.add_subparsers(dest="command")
@@ -364,6 +407,15 @@ def main():
     p_path.add_argument("--from", dest="from_path", default=None)
     p_tree = subparsers.add_parser("tree", help="有向木を表示")
     p_tree.add_argument("--from", dest="from_path", default=None)
+
+    # JSON Canvas 連携
+    p_jce = subparsers.add_parser("jsoncanvas-export", help="state → JSON Canvas (.canvas) 出力")
+    p_jce.add_argument("--from", dest="from_path", default=None, help="state JSON パス（既定: canvas_state.json）")
+    p_jce.add_argument("-o", "--output", default=None, help="出力 .canvas（未指定は標準出力）")
+    p_jci = subparsers.add_parser("jsoncanvas-import", help="JSON Canvas (.canvas) → DSL / state")
+    p_jci.add_argument("input", help="入力 .canvas ファイル")
+    p_jci.add_argument("-o", "--output", default=None, help="出力ファイル（未指定は標準出力）")
+    p_jci.add_argument("--to", choices=("dsl", "state"), default="dsl", help="出力形式（既定: dsl）")
 
     # show
     p_show = subparsers.add_parser("show", help="DSLテキストまたはファイルをキャンバスへ投入")
@@ -437,6 +489,10 @@ def main():
         cmd_path(args)
     elif args.command == "tree":
         cmd_tree(args)
+    elif args.command == "jsoncanvas-export":
+        cmd_jsoncanvas_export(args)
+    elif args.command == "jsoncanvas-import":
+        cmd_jsoncanvas_import(args)
     elif args.command == "show":
         cmd_show(args)
     elif args.command == "normalize":

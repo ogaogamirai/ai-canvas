@@ -149,6 +149,8 @@ edge: e2 [from="einstein", to="insight", label="意味"]
 python -X utf8 canvas_cli.py check  draft.txt        # 行番号付き error/warning（error で exit 1）
 python -X utf8 canvas_cli.py normalize draft.txt -o fixed.txt   # latex/detail を表示向けに整形
 python -X utf8 canvas_cli.py show   fixed.txt        # キャンバスへ投入（起動中）
+python -X utf8 canvas_cli.py jsoncanvas-export -o board.canvas   # state → JSON Canvas（Obsidian 等で開ける）
+python -X utf8 canvas_cli.py jsoncanvas-import board.canvas -o out.dsl   # JSON Canvas → DSL
 ```
 
-その他のコマンド（`state` / `dsl` / `diff` / `apply` / `neighbors` / `path` / `tree` / `types` など）は [README §3](../README.md) を参照。
+その他のコマンド（`state` / `dsl` / `diff` / `apply` / `neighbors` / `path` / `tree` / `types` / `jsoncanvas-*` など）は [README §3](../README.md) を参照。
