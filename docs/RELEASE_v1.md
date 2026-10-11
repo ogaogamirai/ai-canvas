@@ -81,7 +81,7 @@ python -X utf8 -m unittest discover -q
 - 詳細パネル Markdown 表（`CanvasTable`）  
 - export: DOM clone 廃止 → シェル + DSL、minify シェル、Base64 埋め込み（`;` / `\nu` 安全）  
 - inbox 投入: JSON 経由（`__applyCanvasDslFromHost`）  
-- テスト: `unittest discover`（13 件目安）  
+- テスト: `unittest discover`（54 件・2026-10-11）／`node tools/check_*.mjs` 回帰  
 
 ---
 

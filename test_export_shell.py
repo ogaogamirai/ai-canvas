@@ -63,6 +63,24 @@ class TestExportShell(unittest.TestCase):
         with open(os.path.join(BASE, "canvas_app.py"), encoding="utf-8") as f:
             self.assertIn("read_export_shell", f.read())
 
+    def test_export_shell_smaller_than_dev_index(self):
+        """GUI export のフォールバックが index.html（開発用・大）を選ばないことの目安。"""
+        export_kb = EXPORT_SHELL.stat().st_size / 1024
+        index_kb = INDEX_HTML.stat().st_size / 1024
+        self.assertLess(export_kb, 75, "index.export.html が想定より大きい")
+        self.assertGreater(index_kb, export_kb + 30, "index.html は export シェルより大きい")
+
+    def test_assemble_export_prefers_export_html_in_source(self):
+        canvas_js = (INDEX_HTML.parent / "src" / "canvas.js").read_text(encoding="utf-8")
+        m = re.search(
+            r"for \(const name of \[([^\]]+)\]",
+            canvas_js[canvas_js.find("fetchExportShellFromDisk") :],
+        )
+        self.assertIsNotNone(m)
+        self.assertIn("'index.export.html'", m.group(1))
+        self.assertIn("'index.html'", m.group(1))
+        self.assertLess(m.group(1).index("'index.export.html'"), m.group(1).index("'index.html'"))
+
 
 if __name__ == "__main__":
     unittest.main()

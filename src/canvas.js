@@ -1314,6 +1314,17 @@
 
       function stripExportRuntimeDom(rootEl) {
         if (!rootEl || !rootEl.querySelector) return;
+        // Editor 統合後の DOM クローン経路で巨大化しないよう UI 層を除去
+        [
+          '#editor-pane',
+          '#splitter',
+          '#open-editor-btn',
+          '#slash-menu',
+          '#group-picker-overlay'
+        ].forEach((sel) => {
+          const node = rootEl.querySelector(sel);
+          if (node) node.remove();
+        });
         const ol = rootEl.querySelector('#objects-layer');
         const el = rootEl.querySelector('#edges-layer');
         if (ol) ol.innerHTML = '';
@@ -1330,21 +1341,40 @@
         if (log) log.textContent = '単体スナップショット（起動時に DSL から復元）';
       }
 
+      async function fetchExportShellFromDisk() {
+        // 配布用 minify シェルを最優先（index.html は開発用・約2倍のサイズ）
+        for (const name of ['index.export.html', 'index.html']) {
+          try {
+            const resp = await fetch(name, { cache: 'no-store' });
+            if (!resp.ok) continue;
+            const text = await resp.text();
+            if (text && text.trim()) {
+              if (name === 'index.html') {
+                console.warn(
+                  '[export] index.export.html が読めませんでした。' +
+                    ' canvas_cli.py build-export を実行してください。'
+                );
+              }
+              return text;
+            }
+          } catch (_) {}
+        }
+        return null;
+      }
+
       async function assembleExportHtml(dsl) {
         let html = null;
         const api = window.pywebview && window.pywebview.api;
         if (api && typeof api.get_export_shell === 'function') {
           try {
-            html = await api.get_export_shell();
+            const shell = await api.get_export_shell();
+            if (shell && String(shell).trim()) html = String(shell);
           } catch (err) {
             console.warn('[export] get_export_shell', err);
           }
         }
         if (!html) {
-          try {
-            const resp = await fetch('index.html', { cache: 'no-store' });
-            if (resp.ok) html = await resp.text();
-          } catch (_) {}
+          html = await fetchExportShellFromDisk();
         }
         if (html) {
           if (!/^\s*<!DOCTYPE/i.test(html)) html = '<!DOCTYPE html>\n' + html;
@@ -1352,6 +1382,7 @@
         }
         const docClone = document.documentElement.cloneNode(true);
         stripExportRuntimeDom(docClone);
+        console.warn('[export] シェル未取得のため DOM クローンを使用します（サイズが大きくなります）');
         return injectExportDsl('<!DOCTYPE html>\n' + docClone.outerHTML, dsl);
       }
 
