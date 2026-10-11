@@ -218,13 +218,13 @@ edge: e1 [from="origin", to="einstein", label="定式化", color="#10b981", widt
 
 | 成果物 | サイズ | 用途 |
 |---|---|---|
-| 配布単体 HTML（`index.export.html` ＋ 埋め込み DSL） | **約 62–69 KB** | 共有・閲覧（これが配るもの） |
-| `index.export.html`（minify canvas-only シェル） | 約 62 KB | export 正本 |
-| `index.html`（canvas-only） | 約 110 KB | 起動・開発 |
-| `ai-canvas.html`（人間コックピット＝canvas＋editor） | 約 203 KB | 編集 |
+| 配布単体 HTML（`index.export.html` ＋ 埋め込み DSL） | **約 64–71 KB** | 共有・閲覧（これが配るもの） |
+| `index.export.html`（minify canvas-only シェル） | 約 64 KB | export 正本 |
+| `index.html`（canvas-only） | 約 115 KB | 起動・開発 |
+| `ai-canvas.html`（人間コックピット＝canvas＋editor） | 約 208 KB | 編集 |
 | `vendor/katex/`（オフライン数式・任意） | 約 516 KB | 完全オフライン時のみ（CDN フォールバック可） |
 
-- 配布単体 HTML は **約 62–69 KB**（量子デモ相当）。`detail=` が長いと DSL 分だけ増えます。
+- 配布単体 HTML は **約 64–71 KB**（量子デモ相当）。`detail=` が長いと DSL 分だけ増えます。
 - オフライン数式を使う場合は `vendor/katex/`（約 516 KB）を同梱 → 合計 **約 578 KB**。CDN フォールバックなら単体 HTML だけで動きます。
 - **`src/` を直したら** **`canvas_cli.py build-export`**（または `python export_shell.py`）で 3 成果物を再生成してください。
 - 各ノードの **現在の `x` / `y`** を DSL に含めるため、ドラッグ後の配置もスナップショットで復元されます。
@@ -239,6 +239,8 @@ edge: e1 [from="origin", to="einstein", label="定式化", color="#10b981", widt
 python -X utf8 canvas_cli.py jsoncanvas-export -o board.canvas          # state → JSON Canvas（Obsidian 等で開ける）
 python -X utf8 canvas_cli.py jsoncanvas-import board.canvas -o out.dsl  # JSON Canvas → DSL（--to state も可）
 ```
+
+> GUI からも書き出せます: ヘッダ `⋯` → **「🗂 JSON Canvas 書き出し」**（`ai_canvas_<date>.canvas` を保存）。
 
 - 型付きオブジェクト（math/svg/table/sticky 等）は JSON Canvas の `text` に **Markdown** として写します（math は `$$…$$`、table は Markdown 表）。
 - 座標が欠けたノード（自動整列ノードは state に x/y を持たない）は、**階層レイアウトで補完**してから書き出します（他アプリで重ならない）。

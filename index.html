@@ -336,6 +336,7 @@
               <div id="header-menu" class="header-menu hidden">
                 <button type="button" class="menu-item" onclick="Canvas.clear(); Canvas.toggleHeaderMenu(true)">🧹 リセット</button>
                 <button type="button" class="menu-item" onclick="Canvas.exportHTML(); Canvas.toggleHeaderMenu(true)">💾 単体HTML保存</button>
+                <button type="button" class="menu-item" onclick="Canvas.exportJsonCanvas(); Canvas.toggleHeaderMenu(true)">🗂 JSON Canvas 書き出し</button>
                 <button type="button" class="menu-item" id="menu-detail-only" onclick="Canvas.toggleDetailOnly()">📄 詳細: 常に開く</button>
               </div>
             </div>
@@ -462,6 +463,53 @@
         s = s.replace(/\\{2}(?=[a-zA-Z])/g, '\\');
       } while (s !== prev);
       return s;
+    }
+
+    // 🗂 JSON Canvas（.canvas）書き出し用ヘルパー（jsoncanvas_io.py と対称）
+    function jcHex16(s) {
+      let h1 = 0x811c9dc5, h2 = 0x811c9dc5;
+      const str = String(s);
+      for (let i = 0; i < str.length; i++) {
+        const c = str.charCodeAt(i);
+        h1 = Math.imul(h1 ^ c, 16777619);
+        h2 = Math.imul(h2 ^ (c + 7), 16777619);
+      }
+      const hx = (x) => (x >>> 0).toString(16).padStart(8, '0');
+      return hx(h1) + hx(h2);
+    }
+    function jcMdTable(headers, rows) {
+      if (!headers && !rows) return '';
+      const out = [];
+      const hs = String(headers || '').split(',').map(s => s.trim()).filter(Boolean);
+      if (hs.length) {
+        out.push('| ' + hs.join(' | ') + ' |');
+        out.push('| ' + hs.map(() => '---').join(' | ') + ' |');
+      }
+      String(rows || '').split(';').forEach(r => {
+        r = r.trim();
+        if (!r) return;
+        out.push('| ' + r.split('|').map(c => c.trim()).join(' | ') + ' |');
+      });
+      return out.join('\n');
+    }
+    function jcMdForObject(o) {
+      const d = o.data || {};
+      const t = o.type;
+      if (t === 'math') {
+        const title = d.title || d.label || '';
+        const body = d.latex ? `$$\n${d.latex}\n$$` : '';
+        return (title ? `**${title}**\n\n${body}` : body).trim();
+      }
+      if (t === 'svg') return d.svg_content || d.title || '';
+      if (t === 'table') return jcMdTable(d.headers || d.cols, d.rows) || (d.title || '');
+      if (t === 'group') return d.title || '';
+      const parts = [];
+      if (d.title) parts.push(`# ${d.title}`);
+      if (d.sub) parts.push(`*${d.sub}*`);
+      const content = d.content || d.text;
+      if (content) parts.push(content);
+      if (d.detail) parts.push(d.detail);
+      return parts.join('\n\n').trim();
     }
 
     const CANVAS_SCHEMA_VERSION = 1;
@@ -2283,6 +2331,59 @@
               console.error('[exportHTML]', err);
               logBar.innerText = `[保存エラー ⚠️] ${err}`;
             });
+        },
+        // 🗂 JSON Canvas（.canvas）を組み立てる（jsoncanvas_io.py state_to_jsoncanvas と対称）
+        buildJsonCanvas: function() {
+          const jcNodes = [];
+          objects.forEach(o => {
+            const d = o.data || {};
+            const isGroup = o.type === 'group';
+            const node = {
+              id: String(o.id),
+              type: isGroup ? 'group' : 'text',
+              x: Math.round(safeNum(o.x, 0)),
+              y: Math.round(safeNum(o.y, 0)),
+              width: Math.round(safeNum(o.w, 250)),
+              height: Math.round(safeNum(o.h, 100))
+            };
+            if (d.color && /^#/.test(String(d.color))) node.color = String(d.color);
+            if (isGroup) node.label = d.title || String(o.id);
+            else node.text = jcMdForObject(o);
+            node.ai_canvas = { type: o.type, data: d };
+            jcNodes.push(node);
+          });
+          const jcEdges = edges.map((e, idx) => {
+            const st = e.style || {};
+            const ed = { id: jcHex16(`${e.u}->${e.v}:${idx}`), fromNode: e.u, toNode: e.v };
+            if (e.label) ed.label = e.label;
+            if (st.stroke && /^#/.test(String(st.stroke))) ed.color = String(st.stroke);
+            const arrow = st.arrow;
+            if (arrow === 'none') { ed.fromEnd = 'none'; ed.toEnd = 'none'; }
+            else if (arrow === 'double') { ed.fromEnd = 'arrow'; ed.toEnd = 'arrow'; }
+            else { ed.fromEnd = 'none'; ed.toEnd = 'arrow'; }
+            const ext = {};
+            if (st.width != null) ext.width = st.width;
+            if (st.dash) ext.dash = st.dash;
+            if (arrow) ext.arrow = arrow;
+            if (st.arrow_color) ext.arrow_color = st.arrow_color;
+            if (Object.keys(ext).length) ed.ai_canvas = ext;
+            return ed;
+          });
+          return { nodes: jcNodes, edges: jcEdges };
+        },
+        // 🗂 JSON Canvas をファイル書き出し（Obsidian 等で開ける）
+        exportJsonCanvas: function() {
+          const jc = this.buildJsonCanvas();
+          const json = JSON.stringify(jc, null, 2);
+          const name = `ai_canvas_${new Date().toISOString().slice(0, 10)}.canvas`;
+          const blob = new Blob([json], { type: 'application/json;charset=utf-8' });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = name;
+          a.click();
+          URL.revokeObjectURL(url);
+          logBar.innerText = `[JSON Canvas 書き出し 🗂] ${name}（${jc.nodes.length} nodes, ${jc.edges.length} edges）`;
         },
         syncToPython: function() {
           if (window.pywebview && window.pywebview.api && window.pywebview.api.sync_canvas_state) {
