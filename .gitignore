@@ -12,3 +12,9 @@ index_v*_backup.html
 canvas_dsl_*.dsl
 nova_window*.txt
 nova_window*.html
+# 検証probe・scratch・個人キャンバス成果物（2026-10-18 棚卸し）
+scratch/
+_compat_export.html
+_jc_test.canvas
+_size_probe.html
+ai_canvas_nova20261009.html
