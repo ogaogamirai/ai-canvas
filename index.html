@@ -442,8 +442,7 @@
       return out;
     }
 
-    // SVG 断片の軽量サニタイズ（script / foreignObject / on* ハンドラ / javascript: を除去）。
-    // 注: DSL はローカル作者（人間・AI）を信頼する前提。本関数は defense-in-depth。
+    // SVG 断片の軽量サニタイズ（script / foreignObject / on* / javascript: / data: を除去）。
     function sanitizeSvgMarkup(raw) {
       if (raw == null) return '';
       return String(raw)
@@ -451,7 +450,20 @@
         .replace(/<\s*script\b[^>]*>/gi, '')
         .replace(/<\s*foreignObject[\s\S]*?<\s*\/\s*foreignObject\s*>/gi, '')
         .replace(/\son[a-z]+\s*=\s*("[^"]*"|'[^']*'|[^\s>]+)/gi, '')
-        .replace(/(href|xlink:href)\s*=\s*("|')?\s*javascript:[^"'>\s]*/gi, '');
+        .replace(/(href|xlink:href)\s*=\s*("|')?\s*(javascript|data):[^"'>\s]*/gi, '');
+    }
+
+    function escapeHtml(str) {
+      return String(str == null ? '' : str)
+        .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    }
+
+    function safeCssColor(raw, fallback) {
+      const s = String(raw || '').trim();
+      if (/^#[0-9A-Fa-f]{3,8}$/.test(s)) return s;
+      if (/^rgba?\(\s*[\d.,%\s]+\)$/.test(s)) return s;
+      if (/^var\(--[a-z0-9-]+\)$/.test(s)) return s;
+      return fallback;
     }
 
     function normalizeLatexForKatex(expr) {
@@ -2472,14 +2484,17 @@
     Canvas.registerComponent('card', {
       getDimensions: (data) => ({ w: Math.max(80, safeNum(data.w, 200)), h: Math.max(50, safeNum(data.h, 84)) }),
       render: (data, container, dims) => {
-        const color = data.color || '#38bdf8';
+        const color = safeCssColor(data.color, '#38bdf8');
+        const tag = escapeHtml((data.tag || data.id || 'NODE').toUpperCase());
+        const title = escapeHtml(data.title || data.id || '');
+        const sub = data.sub ? escapeHtml(data.sub) : '';
         const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
         g.innerHTML = `
           <rect width="${dims.w}" height="${dims.h}" rx="10" fill="var(--card-bg)" stroke="${color}" stroke-width="1.6" />
           <rect width="${dims.w}" height="5" rx="2" fill="${color}" />
-          <text x="14" y="24" font-size="10" font-weight="700" fill="${color}" letter-spacing="0.05em">${(data.tag || data.id).toUpperCase()}</text>
-          <text x="14" y="46" font-size="13" font-weight="700" fill="var(--card-text)">${data.title || data.id}</text>
-          ${data.sub ? `<text x="14" y="66" font-size="11" fill="var(--card-sub)">${data.sub}</text>` : ''}
+          <text x="14" y="24" font-size="10" font-weight="700" fill="${color}" letter-spacing="0.05em">${tag}</text>
+          <text x="14" y="46" font-size="13" font-weight="700" fill="var(--card-text)">${title}</text>
+          ${sub ? `<text x="14" y="66" font-size="11" fill="var(--card-sub)">${sub}</text>` : ''}
         `;
         container.appendChild(g);
       }
@@ -2492,11 +2507,14 @@
         const fo = document.createElementNS('http://www.w3.org/2000/svg', 'foreignObject');
         fo.setAttribute('width', dims.w);
         fo.setAttribute('height', dims.h);
-        const strokeColor = data.color || 'var(--text-node-border)';
+        const strokeColor = safeCssColor(data.color, 'var(--text-node-border)');
+        const titleColor = safeCssColor(data.color, 'var(--text-node-title)');
+        const t = data.title ? escapeHtml(data.title) : '';
+        const body = escapeHtml(data.content || '');
         fo.innerHTML = `
           <div xmlns="http://www.w3.org/1999/xhtml" style="width:100%; height:100%; background:var(--text-node-bg); border:1.6px dashed ${strokeColor}; border-radius:8px; padding:10px 12px; box-sizing:border-box; color:var(--text-node-body); font-size:12px; line-height:1.5;">
-            ${data.title ? `<div style="font-weight:700; color:${data.color || 'var(--text-node-title)'}; font-size:13px; margin-bottom:4px;">${data.title}</div>` : ''}
-            <div>${data.content || ''}</div>
+            ${t ? `<div style="font-weight:700; color:${titleColor}; font-size:13px; margin-bottom:4px;">${t}</div>` : ''}
+            <div>${body}</div>
           </div>
         `;
         container.appendChild(fo);
@@ -2511,8 +2529,8 @@
         fo.setAttribute('width', dims.w);
         fo.setAttribute('height', dims.h);
         const div = document.createElement('div');
-        const mathBorder = data.color || 'var(--math-border)';
-        const mathLabelColor = data.color || 'var(--math-label)';
+        const mathBorder = safeCssColor(data.color, 'var(--math-border)');
+        const mathLabelColor = safeCssColor(data.color, 'var(--math-label)');
         div.style.cssText = `width:100%; height:100%; background:var(--math-bg); border:1.6px solid ${mathBorder}; border-radius:10px; display:flex; flex-direction:column; justify-content:space-between; align-items:center; box-sizing:border-box; padding:8px 12px 10px 12px; box-shadow:0 6px 16px rgba(0,0,0,0.25);`;
 
         const label = document.createElement('div');
@@ -2539,9 +2557,10 @@
       render: (data, container, dims) => {
         const cx = dims.w / 2, cy = dims.h / 2;
         const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+        const vizTitle = escapeHtml((data.title || 'SVG VIZ').toUpperCase());
         g.innerHTML = `
           <rect width="${dims.w}" height="${dims.h}" rx="12" fill="rgba(15,23,42,0.7)" stroke="#f59e0b" stroke-width="1.4" stroke-dasharray="4,3" />
-          <text x="10" y="18" font-size="10" font-weight="700" fill="#f59e0b">${(data.title || 'SVG VIZ').toUpperCase()}</text>
+          <text x="10" y="18" font-size="10" font-weight="700" fill="#f59e0b">${vizTitle}</text>
           <g transform="translate(${cx}, ${cy})">
             ${sanitizeSvgMarkup(data.svg_content || '')}
           </g>
@@ -2557,17 +2576,20 @@
         const fo = document.createElementNS('http://www.w3.org/2000/svg', 'foreignObject');
         fo.setAttribute('width', dims.w);
         fo.setAttribute('height', dims.h);
-        const bg = data.color || '#fef08a';
+        const bg = safeCssColor(data.color, '#fef08a');
+        const st = escapeHtml(data.title || 'NOTE');
+        const body = escapeHtml(data.content || data.text || '');
+        const author = data.author ? escapeHtml(data.author) : '';
         fo.innerHTML = `
           <div xmlns="http://www.w3.org/1999/xhtml" style="width:100%; height:100%; background:${bg}; border-radius:4px; padding:10px 12px; box-sizing:border-box; color:#1e293b; box-shadow:0 4px 12px rgba(0,0,0,0.35); display:flex; flex-direction:column; justify-content:space-between; transform:rotate(-0.8deg); border-top:3px solid rgba(0,0,0,0.12);">
             <div>
               <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:4px;">
-                <span style="font-weight:800; font-size:12px; color:#0f172a; letter-spacing:0.02em;">${data.title || 'NOTE'}</span>
+                <span style="font-weight:800; font-size:12px; color:#0f172a; letter-spacing:0.02em;">${st}</span>
                 <span style="width:7px; height:7px; border-radius:50%; background:rgba(0,0,0,0.3); display:inline-block;"></span>
               </div>
-              <div style="font-size:11px; line-height:1.45; color:#334155; word-break:break-word;">${data.content || data.text || ''}</div>
+              <div style="font-size:11px; line-height:1.45; color:#334155; word-break:break-word;">${body}</div>
             </div>
-            ${data.author ? `<div style="font-size:9px; font-weight:700; color:rgba(0,0,0,0.4); text-align:right;">— ${data.author}</div>` : ''}
+            ${author ? `<div style="font-size:9px; font-weight:700; color:rgba(0,0,0,0.4); text-align:right;">— ${author}</div>` : ''}
           </div>
         `;
         container.appendChild(fo);
@@ -2581,18 +2603,19 @@
         h: Math.max(100, safeNum(data.h, 240))
       }),
       render: (data, container, dims) => {
-        const accent = data.color || '#38bdf8';
+        const accent = safeCssColor(data.color, '#38bdf8');
+        const titleText = escapeHtml((data.title || 'GROUP').toUpperCase());
+        const subText = data.sub ? escapeHtml(data.sub) : '';
         const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
-        const titleText = data.title || 'GROUP';
-        const badgeW = Math.max(60, titleText.length * 10 + 20);
+        const badgeW = Math.max(60, (data.title || 'GROUP').length * 10 + 20);
 
         g.innerHTML = `
           <g transform="translate(12, 12)">
             <rect width="${badgeW}" height="20" rx="5" fill="${accent}" opacity="0.22" />
             <rect width="${badgeW}" height="20" rx="5" fill="none" stroke="${accent}" stroke-width="1" opacity="0.55" />
-            <text x="8" y="14" font-size="10" font-weight="700" fill="${accent}" letter-spacing="0.04em">${titleText.toUpperCase()}</text>
+            <text x="8" y="14" font-size="10" font-weight="700" fill="${accent}" letter-spacing="0.04em">${titleText}</text>
           </g>
-          ${data.sub ? `<text x="14" y="${dims.h - 12}" font-size="10" fill="#64748b" font-weight="500">${data.sub}</text>` : ''}
+          ${subText ? `<text x="14" y="${dims.h - 12}" font-size="10" fill="#64748b" font-weight="500">${subText}</text>` : ''}
         `;
         container.appendChild(g);
       }
@@ -2609,7 +2632,7 @@
         };
       },
       render: (data, container, dims) => {
-        const accent = data.color || '#38bdf8';
+        const accent = safeCssColor(data.color, '#38bdf8');
         const fo = document.createElementNS('http://www.w3.org/2000/svg', 'foreignObject');
         fo.setAttribute('width', dims.w);
         fo.setAttribute('height', dims.h);

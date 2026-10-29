@@ -60,7 +60,11 @@ Tools/ai-canvas/
 └── README.md         # 本書
 ```
 
-> **手編集する正本は `src/` のみ**。`ai-canvas.html` / `index.html` / `index.export.html` は生成物で、`python -X utf8 canvas_cli.py build-export`（＝`export_shell.build_all()`）が一括生成します。エディタ層は `@editor-only` マーカーで分離し、canvas-only ではビルドが除去します（二重管理なし・2026-10-10）。
+> **手編集する正本は `src/` のみ**。`ai-canvas.html` / `index.html` / `index.export.html` は生成物です。
+> - **フル再生成（推奨）:** `python -X utf8 export_shell.py`（＝`build_all()` · `ai-canvas.html` は minify 込み）
+> - **export シェルのみ:** `python -X utf8 canvas_cli.py build-export` → `index.export.html` のみ
+> エディタ層は `@editor-only` マーカーで分離（2026-10-10）。
+> **セキュリティ:** DSL フィールドの DOM 挿入は `src/canvas.js` の `escapeHtml` / `sanitizeSvgMarkup` — 詳細は JT `loop_runs/loop2-ai-canvas-20261030/artifacts/security_review.md`（ローカル）。
 
 ---
 

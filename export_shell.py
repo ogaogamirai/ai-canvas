@@ -96,7 +96,7 @@ def _assemble(include_editor: bool, minify: bool = False) -> str:
 
 def build_editor_html() -> Path:
     """src/ から ai-canvas.html（canvas + editor）を生成。"""
-    EDITOR_HTML.write_text(_assemble(True), encoding="utf-8")
+    EDITOR_HTML.write_text(_assemble(True, minify=True), encoding="utf-8")
     return EDITOR_HTML
 
 
