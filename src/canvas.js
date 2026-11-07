@@ -952,12 +952,19 @@
         }
 
         // detail を持つノードだけ詳細パネルを開くオプション:
-        // detail が無ければパネルを開かず（開いていれば閉じ）、選択リングだけ残す。
-        if (detailOnlyWithData && !(obj.data && obj.data.detail)) {
+        // detail または table / math / svg などの固有データを持つ場合は詳細パネルを開く
+        const hasRichData = !!(obj.data && (
+          obj.data.detail ||
+          obj.data.content ||
+          (obj.type === 'table' && (obj.data.headers || obj.data.rows)) ||
+          (obj.type === 'math' && obj.data.latex) ||
+          (obj.type === 'svg' && obj.data.svg_content)
+        ));
+        if (detailOnlyWithData && !hasRichData) {
           closeDetailPanel({ clearSelection: false });
           updateConnectionSummary(id);
           updateQuickToolbar(id);
-          logBar.innerText = `[フォーカス] ノード '${id}'（detail なし → 詳細パネル非表示）`;
+          logBar.innerText = `[フォーカス] ノード '${id}'（詳細データなし → 詳細パネル非表示）`;
           return;
         }
 
@@ -1635,13 +1642,14 @@
           createEdgeDom(edge, edges.length - 1);
           updateEdges();
         },
-        // 🌟 自動レイアウトエンジン (→ LR 横 / ↓ TB 縦・上から下 / ↑ BT 縦・下から上)
+        // 🌟 自動レイアウトエンジン (⇄ EDGE エッジ重視・交差最小化 / → LR 横 / ↓ TB 縦・上から下 / ↑ BT 縦・下から上)
         autoLayout: function(direction) {
-          if (direction !== 'LR' && direction !== 'TB' && direction !== 'BT') {
-            direction = this.layoutDirection || 'LR';
+          if (direction !== 'LR' && direction !== 'TB' && direction !== 'BT' && direction !== 'EDGE') {
+            direction = this.layoutDirection || 'EDGE';
           }
           this.layoutDirection = direction;
-          const isHorizontal = direction === 'LR';
+          const isHorizontal = direction === 'LR' || direction === 'EDGE';
+          const isEdgeMode = direction === 'EDGE';
 
           const nodeIds = [];
           objects.forEach((obj, id) => {
@@ -1650,14 +1658,15 @@
           });
 
           // レベル（階層）判定 — サイクル安全（BFS・各ノード一度だけ割当）。
-          // 閉路があっても無限ループせず、レベルが膨張しない（source からの段数で意味を保つ）。
           const levels = new Map();
           const adj = new Map();
+          const revAdj = new Map();
           const indeg = new Map();
-          nodeIds.forEach(id => { levels.set(id, undefined); adj.set(id, []); indeg.set(id, 0); });
+          nodeIds.forEach(id => { levels.set(id, undefined); adj.set(id, []); revAdj.set(id, []); indeg.set(id, 0); });
           edges.forEach(e => {
             if (adj.has(e.u) && levels.has(e.v)) {
               adj.get(e.u).push(e.v);
+              revAdj.get(e.v).push(e.u);
               indeg.set(e.v, indeg.get(e.v) + 1);
             }
           });
@@ -1694,24 +1703,48 @@
             levelGroups.get(lvl).push(id);
           });
 
+          // 🌟 エッジ重視整列 (EDGE): 重心整列（Barycenter Heuristic）でエッジ交差を最小化
+          if (isEdgeMode) {
+            const tempY = new Map();
+            const l0 = levelGroups.get(0) || [];
+            l0.forEach((id, idx) => { tempY.set(id, idx * 160); });
+
+            for (let lvl = 1; lvl <= maxLevel; lvl++) {
+              const group = levelGroups.get(lvl) || [];
+              const barycenters = new Map();
+              group.forEach(v => {
+                const parents = revAdj.get(v) || [];
+                const validParents = parents.filter(p => tempY.has(p));
+                if (validParents.length > 0) {
+                  const avgY = validParents.reduce((sum, p) => sum + tempY.get(p), 0) / validParents.length;
+                  barycenters.set(v, avgY);
+                } else {
+                  barycenters.set(v, 9999);
+                }
+              });
+              group.sort((a, b) => (barycenters.get(a) || 0) - (barycenters.get(b) || 0));
+              group.forEach((id, idx) => { tempY.set(id, idx * 160); });
+            }
+          }
+
           // 配置座標計算
           const startX = 80, startY = 120;
-          // 主軸（階層方向）の間隔を副軸（同階層の並び）より広く取り、向きを明確にする
-          const gapX = isHorizontal ? 340 : 150;
-          const gapY = isHorizontal ? 150 : 250;
+          const gapX = isEdgeMode ? 380 : (isHorizontal ? 340 : 150);
+          const baseGapY = isHorizontal ? 150 : 250;
 
           levelGroups.forEach((ids, lvl) => {
+            let currentY = startY;
             ids.forEach((id, rank) => {
               const obj = objects.get(id);
               if (!obj) return;
-              // BT は階層を反転し、根を下・葉を上へ伸ばす
               const depth = direction === 'BT' ? (maxLevel - lvl) : lvl;
               if (isHorizontal) {
                 obj.x = startX + lvl * gapX;
-                obj.y = startY + rank * gapY;
+                obj.y = isEdgeMode ? currentY : (startY + rank * baseGapY);
+                currentY += Math.max(baseGapY, (obj.h || 80) + 40);
               } else {
                 obj.x = startX + rank * gapX;
-                obj.y = startY + depth * gapY;
+                obj.y = startY + depth * baseGapY;
               }
               obj.manualPos = false;
               if (obj.data) {
@@ -1727,8 +1760,9 @@
           updateGroups();
           this.fitView();
           this.syncToPython();
-          const dirLabel = direction === 'LR' ? '横 (→)'
-            : (direction === 'BT' ? '縦・下から上 (↑)' : '縦・上から下 (↓)');
+          const dirLabel = direction === 'EDGE' ? 'エッジ重視 (⇄ 交差最小化)'
+            : (direction === 'LR' ? '横 (→)'
+            : (direction === 'BT' ? '縦・下から上 (↑)' : '縦・上から下 (↓)'));
           logBar.innerText = `[整列完了] ${dirLabel}に自動整列しました！`;
           if (typeof document !== 'undefined' && document.querySelectorAll) {
             document.querySelectorAll('.layout-dir-btn').forEach(btn => {
@@ -1873,14 +1907,17 @@
           updateViewBox();
           logBar.innerText = '[表示] キャンバス全体を画面に収めました (Fit)';
         },
-        buildExportDsl: function() {
+        buildExportDsl: function(options) {
+          options = options || {};
+          const preservePositions = options.preservePositions !== false; // 既定: 現在配置を100%固定
           const dslLines = ["clear"];
           const skipNodeEdgeProps = new Set(['to', 'link', 'edge', 'edge_color', 'edge_width', 'edge_dash', 'edge_stroke', 'edge_style', 'edge_arrow']);
           objects.forEach(o => {
             const d = o.data || {};
             const props = [];
-            const skipCoords = (o.type === 'group' && d.contains) || !o.manualPos;
-            if (!skipCoords) {
+            const isGroupWithContains = (o.type === 'group' && d.contains);
+            const shouldIncludeCoords = preservePositions ? !isGroupWithContains : (!isGroupWithContains && o.manualPos);
+            if (shouldIncludeCoords) {
               props.push(`x=${Math.round(o.x)}`);
               props.push(`y=${Math.round(o.y)}`);
             }
@@ -1908,29 +1945,32 @@
           }
           return dslLines.join('\n');
         },
-        exportHTML: function() {
-          const dsl = this.buildExportDsl();
+        exportHTML: function(options) {
+          options = options || {};
+          const preserve = options.preservePositions !== false;
+          const dsl = this.buildExportDsl({ preservePositions: preserve });
           assembleExportHtml(dsl)
             .then((htmlContent) => {
               const api = (window.pywebview && window.pywebview.api) ? window.pywebview.api : null;
               const fn = api ? (api.export_html || api.exportHtml) : null;
+              const msgMode = preserve ? '現在の配置を完全固定して' : '自動整列モードで';
               if (fn) {
                 fn.call(api, htmlContent)
-                  .then(res => { logBar.innerText = `[保存成功 💾] ${res}`; })
+                  .then(res => { logBar.innerText = `[保存成功 💾] (${msgMode}) ${res}`; })
                   .catch(err => { logBar.innerText = `[保存エラー ⚠️] ${err}`; });
               } else if (api && api.sync_canvas_state) {
                 api.sync_canvas_state("__EXPORT_HTML__", "system", 0, 0, { raw_html: htmlContent })
-                  .then(() => { logBar.innerText = '[保存成功 💾] ダウンロードフォルダへ保存しました！'; })
+                  .then(() => { logBar.innerText = `[保存成功 💾] ${msgMode}ダウンロードフォルダへ保存しました！`; })
                   .catch(err => { logBar.innerText = `[保存エラー ⚠️] ${err}`; });
               } else {
                 const blob = new Blob([htmlContent], { type: 'text/html;charset=utf-8' });
                 const url = URL.createObjectURL(blob);
                 const a = document.createElement('a');
                 a.href = url;
-                a.download = `ai_canvas_snapshot_${new Date().toISOString().slice(0, 10)}.html`;
+                a.download = `ai_canvas_snapshot_${preserve ? 'fixed_' : ''}${new Date().toISOString().slice(0, 10)}.html`;
                 a.click();
                 URL.revokeObjectURL(url);
-                logBar.innerText = '[エクスポート] 自己完結した単体HTMLを保存しました！';
+                logBar.innerText = `[エクスポート 💾] ${msgMode}単体HTMLを保存しました！`;
               }
             })
             .catch((err) => {
@@ -2104,9 +2144,13 @@
         const strokeColor = safeCssColor(data.color, 'var(--text-node-border)');
         const titleColor = safeCssColor(data.color, 'var(--text-node-title)');
         const t = data.title ? escapeHtml(data.title) : '';
-        const body = escapeHtml(data.content || '');
+        let rawContent = data.content || '';
+        let body = escapeHtml(rawContent).replace(/\n/g, '<br/>');
+        body = body.replace(/&lt;b&gt;/g, '<b>').replace(/&lt;\/b&gt;/g, '</b>')
+                   .replace(/&lt;strong&gt;/g, '<strong>').replace(/&lt;\/strong&gt;/g, '</strong>')
+                   .replace(/&lt;br\s*\/?&gt;/g, '<br/>');
         fo.innerHTML = `
-          <div xmlns="http://www.w3.org/1999/xhtml" style="width:100%; height:100%; background:var(--text-node-bg); border:1.6px dashed ${strokeColor}; border-radius:8px; padding:10px 12px; box-sizing:border-box; color:var(--text-node-body); font-size:12px; line-height:1.5;">
+          <div xmlns="http://www.w3.org/1999/xhtml" style="width:100%; height:100%; background:var(--text-node-bg); border:1.6px dashed ${strokeColor}; border-radius:8px; padding:10px 12px; box-sizing:border-box; color:var(--text-node-body); font-size:12px; line-height:1.5; overflow-y:auto; word-break:break-word;">
             ${t ? `<div style="font-weight:700; color:${titleColor}; font-size:13px; margin-bottom:4px;">${t}</div>` : ''}
             <div>${body}</div>
           </div>
@@ -2209,7 +2253,7 @@
             <rect width="${badgeW}" height="20" rx="5" fill="none" stroke="${accent}" stroke-width="1" opacity="0.55" />
             <text x="8" y="14" font-size="10" font-weight="700" fill="${accent}" letter-spacing="0.04em">${titleText}</text>
           </g>
-          ${subText ? `<text x="14" y="${dims.h - 12}" font-size="10" fill="#64748b" font-weight="500">${subText}</text>` : ''}
+          ${subText ? `<text x="${badgeW + 22}" y="26" font-size="11" fill="var(--card-sub, #64748b)" font-weight="500">${subText}</text>` : ''}
         `;
         container.appendChild(g);
       }
@@ -2235,7 +2279,10 @@
         wrap.setAttribute('xmlns', 'http://www.w3.org/1999/xhtml');
         wrap.style.cssText =
           'width:100%; height:100%; background:var(--table-bg); border:1.6px solid ' + accent +
-          '; border-radius:10px; padding:8px 10px; box-sizing:border-box; color:var(--card-text); display:flex; flex-direction:column; overflow:hidden;';
+          '; border-radius:10px; padding:8px 10px; box-sizing:border-box; color:var(--card-text); display:flex; flex-direction:column; overflow:hidden; cursor:pointer;';
+        wrap.addEventListener('click', (ev) => {
+          selectNode(data.id, { openDetail: true });
+        });
 
         if (data.title) {
           const titleEl = document.createElement('div');
