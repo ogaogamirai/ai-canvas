@@ -1,7 +1,8 @@
 # AI-Canvas DSL 文法・使い方（コンパクト版）
 
 > AI も人間も読む 1 枚リファレンス。正本パーサーは `src/canvas.js` の `applyDSL`。
-> 書き方 → `check` → `normalize` → `show` の順が標準（詳細は [README §3](../README.md)）。
+> 書き方 → `check` → `normalize` → `show` の順が標準（詳細は [README §3](../README.md)）。  
+> **認知工学設計（直感的なグラフの型・見せ方）**: [`docs/ARCHETYPES.md`](ARCHETYPES.md)（5大アーキタイプと二重符号化原則）
 
 ---
 

@@ -2618,7 +2618,7 @@
         const innerH = Math.max(10, dims.h - headerH - 8);
         const color = safeCssColor(data.color, '#f59e0b');
 
-        let svgBody = sanitizeSvgMarkup(data.svg_content || '');
+        let svgBody = sanitizeSvgMarkup(data.svg_content || data.svg || '');
         let nestedSvg = '';
 
         if (/<svg\b/i.test(svgBody)) {

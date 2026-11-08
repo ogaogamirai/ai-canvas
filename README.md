@@ -3,7 +3,7 @@
 > **公開デモ（ブラウザで即試せます）**: https://ogaogamirai.github.io/ai-canvas/ai-canvas.html  
 > **v1.0 完成（2026-10-09）／最終更新 2026-10-11** — サーバーレス・双方向同期・minify export・エッジ装飾・詳細 Markdown 表。  
 > 最新追加: `/sticky`・自動整列3方向（→ ↑ ↓）・エッジ追加直後の再整列・詳細パネルでの `detail` 編集（[`docs/DSL.md`](docs/DSL.md)）  
-> **共有ガイド**: [`docs/USER_GUIDE.md`](docs/USER_GUIDE.md) / **リリース記録**: [`docs/RELEASE_v1.md`](docs/RELEASE_v1.md)
+> **共有ガイド**: [`docs/USER_GUIDE.md`](docs/USER_GUIDE.md) / **認知工学設計ガイド**: [`docs/ARCHETYPES.md`](docs/ARCHETYPES.md) / **リリース記録**: [`docs/RELEASE_v1.md`](docs/RELEASE_v1.md)
 
 > **「ローカルサーバーゼロで動く、人間とAIのための多角的思考キャンバス」**  
 > 思考カード・KaTeX数式・解説テキスト・動的SVGベクター図形が、超簡易DSLと自動整列によって軽やかに共創される共有空間。
