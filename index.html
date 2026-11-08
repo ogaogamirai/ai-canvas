@@ -164,7 +164,7 @@
     .canvas-obj.dragging { filter: drop-shadow(0 14px 28px rgba(0,0,0,0.75)); }
 
     /* エッジ */
-    .edge-path { fill: none; stroke-linecap: round; stroke-width: 1.6; }
+    .edge-path { fill: none; stroke-linecap: round; stroke-width: 2.2; }
     .edge-path:not([stroke]) { stroke: var(--edge-stroke); }
     .edge-label:not([fill]) { fill: var(--edge-label); }
     .edge-label { font-size: 11px; font-weight: 600; text-anchor: middle; dominant-baseline: middle; }
@@ -388,7 +388,7 @@
             <path d="M 32 0 L 0 0 0 32" fill="none" class="grid-line" />
           </pattern>
           <!-- 矢印マーカー -->
-          <marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+          <marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="9" markerHeight="9" orient="auto-start-reverse">
             <path id="arrow-path" d="M 0 1.5 L 8 5 L 0 8.5 z" fill="var(--arrow-fill)" />
           </marker>
         </defs>
@@ -753,6 +753,9 @@
           const w = Number(style.width);
           if (isFinite(w) && w > 0 && w <= 12) out.width = w;
         }
+        if (style.style === 'straight' || style.curve === 'straight') {
+          out.style = 'straight';
+        }
         if (style.dash != null && String(style.dash).trim()) {
           const dStr = String(style.dash).trim();
           out.dash = (dStr === 'dashed' || dStr === 'true') ? '5,4' : dStr;
@@ -788,8 +791,8 @@
             marker.setAttribute('viewBox', '0 0 10 10');
             marker.setAttribute('refX', '8');
             marker.setAttribute('refY', '5');
-            marker.setAttribute('markerWidth', '6');
-            marker.setAttribute('markerHeight', '6');
+            marker.setAttribute('markerWidth', '9');
+            marker.setAttribute('markerHeight', '9');
             marker.setAttribute('orient', 'auto-start-reverse');
             const p = document.createElementNS('http://www.w3.org/2000/svg', 'path');
             p.setAttribute('d', 'M 0 1.5 L 8 5 L 0 8.5 z');
@@ -958,7 +961,7 @@
         return offsets;
       }
 
-      function calcEdgePath(ux_raw, uy_raw, uw_raw, uh_raw, vx_raw, vy_raw, vw_raw, vh_raw, off_raw) {
+      function calcEdgePath(ux_raw, uy_raw, uw_raw, uh_raw, vx_raw, vy_raw, vw_raw, vh_raw, off_raw, edgeStyle) {
         const off = safeNum(off_raw, 0);
         const ux = safeNum(ux_raw, 0), uy = safeNum(uy_raw, 0);
         const uw = Math.max(20, safeNum(uw_raw, 180)), uh = Math.max(20, safeNum(uh_raw, 80));
@@ -995,6 +998,13 @@
         }
         // 並行エッジを少しずらす（水平なら Y、垂直なら X 方向）
         if (horizontal) { c1[1] += off; c2[1] += off; } else { c1[0] += off; c2[0] += off; }
+        if (edgeStyle && (edgeStyle.style === 'straight' || edgeStyle.curve === 'straight')) {
+          return {
+            d: `M ${safeFixed(p1[0])} ${safeFixed(p1[1])} L ${safeFixed(p2[0])} ${safeFixed(p2[1])}`,
+            mx: (safeNum(p1[0]) + safeNum(p2[0])) / 2 + (horizontal ? 0 : off),
+            my: (safeNum(p1[1]) + safeNum(p2[1])) / 2 + (horizontal ? off : 0) - 10
+          };
+        }
         return {
           d: `M ${safeFixed(p1[0])} ${safeFixed(p1[1])} C ${safeFixed(c1[0])} ${safeFixed(c1[1])}, ${safeFixed(c2[0])} ${safeFixed(c2[1])}, ${safeFixed(p2[0])} ${safeFixed(p2[1])}`,
           mx: (safeNum(p1[0]) + safeNum(p2[0])) / 2 + (horizontal ? 0 : off),
@@ -1014,7 +1024,7 @@
           const lbl = document.getElementById('lbl_' + edgeId);
           if (!path) return;
 
-          const res = calcEdgePath(u.x, u.y, u.w, u.h, v.x, v.y, v.w, v.h, offsets[idx]);
+          const res = calcEdgePath(u.x, u.y, u.w, u.h, v.x, v.y, v.w, v.h, offsets[idx], edge.style);
           const hit = document.getElementById('hit_' + edgeId);
           if (hit) hit.setAttribute('d', res.d);
           path.setAttribute('d', res.d);
