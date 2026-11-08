@@ -2224,7 +2224,7 @@
         }
 
         g.innerHTML = `
-          <rect width="${dims.w}" height="${dims.h}" rx="10" fill="rgba(15,23,42,0.85)" stroke="${color}" stroke-width="1.5" />
+          <rect width="${dims.w}" height="${dims.h}" rx="10" fill="var(--card-bg)" stroke="${color}" stroke-width="1.5" />
           <text x="12" y="18" font-size="11" font-weight="700" fill="${color}">${vizTitle}</text>
           ${nestedSvg}
         `;
